@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "browserify-fs": "^1.0.0",
+    "log4js": "6.7.1",
+    "source-map": "^0.7.4",
+    "ts-loader": "^9.5.1"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.4"
+  }
+}

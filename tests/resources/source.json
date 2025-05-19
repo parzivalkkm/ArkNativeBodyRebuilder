@@ -1,0 +1,1016 @@
+[
+    {
+        "method": "@ohos.telephony.radio.d.ts: radio._.getISOCountryCodeForNetworkSync(slotId: number): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.radio.d.ts: radio._.getISOCountryCodeForNetwork(slotId: number): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.radio.d.ts: radio._.getISOCountryCodeForNetwork(slotId: number, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.telephony.radio.d.ts: radio._.getOperatorNameSync(slotId: number): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.radio.d.ts: radio._.getOperatorName(slotId: number): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.radio.d.ts: radio._.getOperatorName(slotId: number, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getISOCountryCodeForSimSync(slotId: number): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getISOCountryCodeForSim(slotId: number): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getISOCountryCodeForSim(slotId: number, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getOpKeySync(slotId: number): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getOpKey(slotId: number): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getOpKey(slotId: number, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getSimAccountInfo(slotId: number): Promise<IccAccountInfo>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getSimAccountInfo(slotId: number, callback: AsyncCallback<IccAccountInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getActiveSimAccountInfoList(callback: AsyncCallback<Array<IccAccountInfo>>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "1"
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getActiveSimAccountInfoList(): Promise<Array<IccAccountInfo>>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getSimSpnSync(slotId: number): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getSimSpn(slotId: number): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.telephony.sim.d.ts: sim._.getSimSpn(slotId: number, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.account.appAccount.d.ts: appAccount.AppAccountManager.getCustomDataSync(name: string, key: string): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.account.appAccount.d.ts: appAccount.AppAccountManager.getCustomData(name: string, key: string): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.account.appAccount.d.ts: appAccount.AppAccountManager.getCustomData(name: string, key: string, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.geoLocationManager.d.ts: geoLocationManager._.getLastLocation(): Location",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.commonEvent.d.ts: commonEvent._.subscribe(subscriber: CommonEventSubscriber, callback: AsyncCallback<CommonEventData>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.commonEventManager.d.ts: commonEventManager._.subscribe(subscriber: CommonEventSubscriber, callback: AsyncCallback<CommonEventData>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "commonEvent/commonEventSubscriber.d.ts: _.CommonEventSubscriber.getDataSync(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "commonEvent/commonEventSubscriber.d.ts: _.CommonEventSubscriber.getData(): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "commonEvent/commonEventSubscriber.d.ts: _.CommonEventSubscriber.getData(callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "1"
+    },
+    {
+        "method": "@ohos.rpc.d.ts: rpc.RemoteObject.onRemoteMessageRequest(code: number, data: MessageSequence, reply: MessageSequence, options: MessageOption): boolean | Promise<boolean>",
+        "sourceType": "ArgIn",
+        "sourceIndex": "2",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.rpc.d.ts: rpc.RemoteObject.onRemoteRequest(code: number, data: MessageParcel, reply: MessageParcel, options: MessageOption): boolean",
+        "sourceType": "ArgIn",
+        "sourceIndex": "2",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.bluetooth.socket.d.ts: socket._.on(type: 'sppRead', clientSocket: number, callback: Callback<ArrayBuffer>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.fetch(request: Request): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.get(url: URLOrString, destination?: ResponseBodyDestination): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.post(url: URLOrString, content?: RequestContent, destination?: ResponseBodyDestination): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.put(url: URLOrString, content?: RequestContent, destination?: ResponseBodyDestination): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.downloadToFile(url: URLOrString, downloadTo: DownloadToFile): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.uploadFromFile(url: URLOrString, uploadFrom: UploadFromFile): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.downloadToStream(url: URLOrString, downloadTo: DownloadToStream): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.uploadFromStream(url: URLOrString, uploadFrom: UploadFromStream): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.head(url: URLOrString): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@hms.collaboration.rcp.d.ts: rcp.Session.delete(url: URLOrString): Promise<Response>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.request(url: string, callback: AsyncCallback<HttpResponse>): void",
+        "sourceType": "callback",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.request(url: string, options: HttpRequestOptions, callback: AsyncCallback<HttpResponse>): void",
+        "sourceType": "callback",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.request(url: string, options?: HttpRequestOptions): Promise<HttpResponse>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.requestInStream(url: string, callback: AsyncCallback<number>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.requestInStream(url: string, options: HttpRequestOptions, callback: AsyncCallback<number>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.requestInStream(url: string, options?: HttpRequestOptions): Promise<number>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.on(type: \"headerReceive\", callback: AsyncCallback<Object>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.on(type: \"headersReceive\", callback: Callback<Object>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.once(type: \"headersReceive\", callback: Callback<Object>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.on(type: \"dataReceive\", callback: Callback<ArrayBuffer>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.http.d.ts: http.HttpRequest.on(type: 'dataReceiveProgress', callback: Callback<DataReceiveProgressInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.mdns.d.ts: mdns._.resolveLocalService(context: Context, serviceInfo: LocalServiceInfo, callback: AsyncCallback<LocalServiceInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.net.mdns.d.ts: mdns._.resolveLocalService(context: Context, serviceInfo: LocalServiceInfo): Promise<LocalServiceInfo>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.net.mdns.d.ts: mdns.DiscoveryService.on(type: 'discoveryStart', callback: Callback<DiscoveryEventInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.mdns.d.ts: mdns.DiscoveryService.on(type: 'serviceFound', callback: Callback<LocalServiceInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.mdns.d.ts: mdns.DiscoveryService.on(type: 'serviceLost', callback: Callback<LocalServiceInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.mdns.d.ts: mdns.DiscoveryService.on(type: 'discoveryStop', callback: Callback<DiscoveryEventInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.socket.d.ts: socket.UDPSocket.on(type: 'message', callback: Callback<SocketMessageInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.socket.d.ts: socket.LocalSocket.on(type: 'message', callback: Callback<LocalSocketMessageInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.socket.d.ts: socket.LocalSocketConnection.on(type: 'message', callback: Callback<LocalSocketMessageInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.socket.d.ts: socket.TCPSocket.on(type: 'message', callback: Callback<SocketMessageInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.socket.d.ts: socket.TLSSocket.on(type: 'message', callback: Callback<SocketMessageInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.socket.d.ts: socket.TCPSocketConnection.on(type: 'message', callback: Callback<SocketMessageInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.socket.d.ts: socket.TLSSocketConnection.on(type: 'message', callback: Callback<SocketMessageInfo>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.webSocket.d.ts: webSocket.WebSocket.on(type: 'message', callback: AsyncCallback<string | ArrayBuffer>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.net.webSocket.d.ts: webSocket.WebSocket.on(type: 'headerReceive', callback: Callback<ResponseHeaders>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.bluetooth.socket.d.ts: socket._.on(type: 'sppRead', clientSocket: number, callback: Callback<ArrayBuffer>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.bluetooth.d.ts: bluetooth._.on(type: 'sppRead', clientSocket: number, callback: Callback<ArrayBuffer>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.bluetoothManager.d.ts: bluetoothManager._.on(type: 'sppRead', clientSocket: number, callback: Callback<ArrayBuffer>): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebCookieManager.getCookie(url: string): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebCookieManager.fetchCookieSync(url: string, incognito?: boolean): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebCookieManager.fetchCookie(url: string): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebCookieManager.fetchCookie(url: string, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebMessagePort.onMessageEvent(callback: (result: WebMessage) => void): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "1"
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebMessagePort.onMessageEventExt(callback: (result: WebMessageExt) => void): void",
+        "sourceType": "callback",
+        "sourceIndex": "1",
+        "callbackIndex": "1"
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.getTitle(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.runJavaScript(script: string): Promise<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.runJavaScript(script: string, callback: AsyncCallback<string>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.runJavaScriptExt(script: string | ArrayBuffer): Promise<JsMessageExt>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.runJavaScriptExt(script: string | ArrayBuffer, callback: AsyncCallback<JsMessageExt>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.getUrl(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.getOriginalUrl(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebviewController.getFavicon(): image.PixelMap",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebResourceHandler.didReceiveResponse(response: WebSchemeHandlerResponse): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.web.webview.d.ts: webview.WebResourceHandler.didReceiveResponseBody(data: ArrayBuffer): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getDataSync(): PasteData",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getData(): Promise<PasteData>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getData(callback: AsyncCallback<PasteData>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "1"
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getPrimaryText(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getPrimaryHtml(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getPrimaryWant(): Want",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getPrimaryUri(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getMimeTypes(): Array<string>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getPrimaryMimeType(): string",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getPrimaryPixelMap(): image.PixelMap",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.pasteboard.d.ts: pasteboard.SystemPasteboard.getProperty(): PasteDataProperty",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIAbility.d.ts: _.UIAbility.onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIAbility.d.ts: _.UIAbility.onContinue(wantParam: Record<string, Object>): AbilityConstant.OnContinueResult | Promise<AbilityConstant.OnContinueResult>",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIAbility.d.ts: _.UIAbility.onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIAbility.d.ts: _.UIAbility.onDump(params: Array<string>): Array<string>",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIAbility.d.ts: _.UIAbility.onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult",
+        "sourceType": "ArgIn",
+        "sourceIndex": "2",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIAbility.d.ts: _.UIAbility.onShare(wantParam: Record<string, Object>): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIExtensionAbility.d.ts: _.UIExtensionAbility.onCreate(launchParam: AbilityConstant.LaunchParam): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.UIExtensionAbility.d.ts: _.UIExtensionAbility.onSessionCreate(want: Want, session: UIExtensionContentSession): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.app.ability.VpnExtensionAbility.d.ts: _.VpnExtensionAbility.onCreate(want: Want): void",
+        "sourceType": "ArgIn",
+        "sourceIndex": "1",
+        "callbackIndex": ""
+    },
+    {
+        "method": "application/UIAbilityContext.d.ts: _.UIAbilityContext.startAbilityForResult(want: Want, callback: AsyncCallback<AbilityResult>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "application/UIAbilityContext.d.ts: _.UIAbilityContext.startAbilityForResult(want: Want, options: StartOptions, callback: AsyncCallback<AbilityResult>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "application/UIAbilityContext.d.ts: _.UIAbilityContext.startAbilityForResult(want: Want, options?: StartOptions): Promise<AbilityResult>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "application/UIExtensionContext.d.ts: _.UIExtensionContext.startAbilityForResult(want: Want, callback: AsyncCallback<AbilityResult>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "application/UIExtensionContext.d.ts: _.UIExtensionContext.startAbilityForResult(want: Want, options: StartOptions, callback: AsyncCallback<AbilityResult>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "application/UIExtensionContext.d.ts: _.UIExtensionContext.startAbilityForResult(want: Want, options?: StartOptions): Promise<AbilityResult>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.ability.featureAbility.d.ts: featureAbility._.startAbilityForResult(parameter: StartAbilityParameter, callback: AsyncCallback<AbilityResult>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.ability.featureAbility.d.ts: featureAbility._.startAbilityForResult(parameter: StartAbilityParameter): Promise<AbilityResult>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.rdb.d.ts: rdb.RdbStore.query(predicates: RdbPredicates, columns: Array<string>, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.rdb.d.ts: rdb.RdbStore.query(predicates: RdbPredicates, columns?: Array<string>): Promise<ResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.rdb.d.ts: rdb.RdbStore.querySql(sql: string, bindArgs: Array<ValueType>, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.rdb.d.ts: rdb.RdbStore.querySql(sql: string, bindArgs?: Array<ValueType>): Promise<ResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.query(predicates: RdbPredicates, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.query(predicates: RdbPredicates, columns: Array<string>, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.query(predicates: RdbPredicates, columns?: Array<string>): Promise<ResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.querySync(predicates: RdbPredicates, columns?: Array<string>): ResultSet",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.querySql(sql: string, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.querySql(sql: string, bindArgs: Array<ValueType>, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.querySql(sql: string, bindArgs?: Array<ValueType>): Promise<ResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.relationalStore.d.ts: relationalStore.RdbStore.querySqlSync(sql: string, bindArgs?: Array<ValueType>): ResultSet",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.preferences.d.ts: preferences.Preferences.get(key: string, defValue: ValueType, callback: AsyncCallback<ValueType>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.preferences.d.ts: preferences.Preferences.get(key: string, defValue: ValueType): Promise<ValueType>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.preferences.d.ts: preferences.Preferences.getSync(key: string, defValue: ValueType): ValueType",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.preferences.d.ts: preferences.Preferences.getAll(callback: AsyncCallback<Object>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "1"
+    },
+    {
+        "method": "@ohos.data.preferences.d.ts: preferences.Preferences.getAll(): Promise<Object>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.preferences.d.ts: preferences.Preferences.getAllSync(): Object",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.get(key: string, callback: AsyncCallback<boolean | string | number | Uint8Array>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.get(key: string): Promise<boolean | string | number | Uint8Array>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getEntries(keyPrefix: string, callback: AsyncCallback<Entry[]>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getEntries(keyPrefix: string): Promise<Entry[]>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getEntries(query: Query, callback: AsyncCallback<Entry[]>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getEntries(query: Query): Promise<Entry[]>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getResultSet(keyPrefix: string, callback: AsyncCallback<KVStoreResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getResultSet(keyPrefix: string): Promise<KVStoreResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getResultSet(query: Query, callback: AsyncCallback<KVStoreResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.SingleKVStore.getResultSet(query: Query): Promise<KVStoreResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.get(key: string, callback: AsyncCallback<boolean | string | number | Uint8Array>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.get(key: string): Promise<boolean | string | number | Uint8Array>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.get(deviceId: string, key: string, callback: AsyncCallback<boolean | string | number | Uint8Array>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.get(deviceId: string, key: string): Promise<boolean | string | number | Uint8Array>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(keyPrefix: string, callback: AsyncCallback<Entry[]>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(keyPrefix: string): Promise<Entry[]>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(deviceId: string, keyPrefix: string, callback: AsyncCallback<Entry[]>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(deviceId: string, keyPrefix: string): Promise<Entry[]>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(query: Query, callback: AsyncCallback<Entry[]>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(query: Query): Promise<Entry[]>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(deviceId: string, query: Query, callback: AsyncCallback<Entry[]>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getEntries(deviceId: string, query: Query): Promise<Entry[]>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(keyPrefix: string, callback: AsyncCallback<KVStoreResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(keyPrefix: string): Promise<KVStoreResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(deviceId: string, keyPrefix: string, callback: AsyncCallback<KVStoreResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(deviceId: string, keyPrefix: string): Promise<KVStoreResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(query: Query, callback: AsyncCallback<KVStoreResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(query: Query): Promise<KVStoreResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(deviceId: string, query: Query, callback: AsyncCallback<KVStoreResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "@ohos.data.distributedKVStore.d.ts: distributedKVStore.DeviceKVStore.getResultSet(deviceId: string, query: Query): Promise<KVStoreResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "ability/dataAbilityHelper.d.ts: _.DataAbilityHelper.query(uri: string, columns: Array<string>, predicates: dataAbility.DataAbilityPredicates, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "4"
+    },
+    {
+        "method": "ability/dataAbilityHelper.d.ts: _.DataAbilityHelper.query(uri: string, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "2"
+    },
+    {
+        "method": "ability/dataAbilityHelper.d.ts: _.DataAbilityHelper.query(uri: string, columns: Array<string>, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "ability/dataAbilityHelper.d.ts: _.DataAbilityHelper.query(uri: string, predicates: dataAbility.DataAbilityPredicates, callback: AsyncCallback<ResultSet>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "ability/dataAbilityHelper.d.ts: _.DataAbilityHelper.query(uri: string, columns?: Array<string>, predicates?: dataAbility.DataAbilityPredicates): Promise<ResultSet>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    },
+    {
+        "method": "ability/dataAbilityHelper.d.ts: _.DataAbilityHelper.executeBatch(uri: string, operations: Array<DataAbilityOperation>, callback: AsyncCallback<Array<DataAbilityResult>>): void",
+        "sourceType": "callback",
+        "sourceIndex": "2",
+        "callbackIndex": "3"
+    },
+    {
+        "method": "ability/dataAbilityHelper.d.ts: _.DataAbilityHelper.executeBatch(uri: string, operations: Array<DataAbilityOperation>): Promise<Array<DataAbilityResult>>",
+        "sourceType": "return",
+        "sourceIndex": "",
+        "callbackIndex": ""
+    }
+]

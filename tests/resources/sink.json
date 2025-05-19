@@ -1,0 +1,17 @@
+[
+    {
+        "method": "@ohos.hilog.d.ts: hilog._.info(domain: number, tag: string, format: string, ...args: any[]): void;"
+    },
+    {
+        "method": "@ohos.hilog.d.ts: hilog._.warn(domain: number, tag: string, format: string, ...args: any[]): void;"
+    },
+    {
+        "method": "@ohos.hilog.d.ts: hilog._.error(domain: number, tag: string, format: string, ...args: any[]): void;"
+    },
+    {
+        "method": "@ohos.hilog.d.ts: hilog._.debug(domain: number, tag: string, format: string, ...args: any[]): void;"
+    },
+    {
+        "method": "@ohos.hilog.d.ts: hilog._.fatal(domain: number, tag: string, format: string, ...args: any[]): void;"
+    }
+]

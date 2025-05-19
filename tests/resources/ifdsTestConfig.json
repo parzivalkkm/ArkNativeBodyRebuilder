@@ -1,0 +1,20 @@
+{
+    "targetProjectName": "TaintTest",    
+    "targetProjectDirectory": "D:\\WorkSpace\\ArkTS_Native\\Benchmarks\\ArkTStaintExample\\DirectLeak",
+
+    "logPath": "out/ArkAnalyzer.log",
+    "logLevel": "DEBUG",
+    
+    "sdks": [
+        {
+            "name": "etsSdk",
+            "path": "D:\\OpenHarmony\\DevEco Studio\\sdk\\default\\openharmony\\ets",
+            "moduleName": ""
+        },
+        {
+          "name": "hmsSdk",
+          "path": "D:\\OpenHarmony\\DevEco Studio\\sdk\\default\\hms\\ets",
+          "moduleName": ""
+        }
+      ]
+}
