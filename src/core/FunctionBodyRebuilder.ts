@@ -1,5 +1,3 @@
-
-
 import { IRFunction } from '../ir/IRFunction';
 // import { IRValue } from '../ir/IRValue';
 // import { ValueType } from '../ValueType';
@@ -10,7 +8,7 @@ import { ArkBody } from '@ArkAnalyzer/src/core/model/ArkBody';
 import { Local } from '@ArkAnalyzer/src/core/base/Local';
 import { ArkClass } from '@ArkAnalyzer/src/core/model/ArkClass';
 import { Scene } from '@ArkAnalyzer/src/Scene';
-import { MethodSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
+import { MethodSignature, MethodSubSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import { ArkSignatureBuilder } from '@ArkAnalyzer/src/core/model/builder/ArkSignatureBuilder';
 import { checkAndUpdateMethod } from '@ArkAnalyzer/src/core/model/builder/ArkMethodBuilder';
 import { TypeInference } from './TypeInference';
@@ -19,7 +17,9 @@ import { CFGBuilder } from './CFGBuilder';
 import { LOG_MODULE_TYPE } from '@ArkAnalyzer/src/utils/logger';
 import ConsoleLogger from '@ArkAnalyzer/src/utils/logger';
 import { IRInstruction } from '../ir/IRInstruction';
-import { MethodSignatureIR } from '../ir/JsonObjectInterface';
+import { MethodSubSignatureMap } from '../ir/JsonObjectInterface';
+import { ArkInstanceInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
+import { UnknownType } from '@ArkAnalyzer/src/core/base/Type';
 /**
  * 负责重建函数体的类
  */
@@ -28,11 +28,11 @@ export class FunctionBodyRebuilder {
     private declaringClass: ArkClass;
     private irFunction: IRFunction;
     private logger: Logger;
-    private napiCalls: MethodSignatureIR[];
     private functionMethod: ArkMethod;
-
+    private methodSubSignatureMap: Map<string, MethodSubSignatureMap[]>;
     private defUseMap: { [variable: string]: { definedIn: IRInstruction[]; usedIn: IRInstruction[] } }
     = {};
+    private invokeExpr: ArkInstanceInvokeExpr;
 
     // TODO 在functionBodyRebuilder之前
     // 需要获取调用上下文，对于传入参数为object以及Function的情况
@@ -41,14 +41,14 @@ export class FunctionBodyRebuilder {
 
     // 此外对于call function时，获取对应的域也很重要，staticcall时直接获取this，instancecall时需要获取对应的class
     
-    constructor(scene: Scene, declaringClass: ArkClass, irFunction: IRFunction, napiCalls: MethodSignatureIR[]) {
+    constructor(scene: Scene, declaringClass: ArkClass, irFunction: IRFunction, methodSubSignatureMap: Map<string, MethodSubSignatureMap[]>, invokeExpr: ArkInstanceInvokeExpr) {
         this.scene = scene;
         this.declaringClass = declaringClass;
         this.irFunction = irFunction;
         this.logger = ConsoleLogger.getLogger(LOG_MODULE_TYPE.TOOL, 'FunctionBodyRebuilder');
-        
         this.functionMethod = new ArkMethod();
-        this.napiCalls = napiCalls;
+        this.methodSubSignatureMap = methodSubSignatureMap;
+        this.invokeExpr = invokeExpr;
     }
     
     /**
@@ -79,6 +79,7 @@ export class FunctionBodyRebuilder {
         
         // 6. 将方法添加到场景中
         this.scene.addToMethodsMap(this.functionMethod);
+        this.logger.info(`invokeExpr: ${this.invokeExpr.toString()}`);
     }
     
     /**
@@ -88,11 +89,41 @@ export class FunctionBodyRebuilder {
         // 设置声明类
         this.functionMethod.setDeclaringArkClass(this.declaringClass);
         
-        // 创建方法签名
-        const methodSubSignature = ArkSignatureBuilder.buildMethodSubSignatureFromMethodName(
-            `@nodeapiFunction${this.irFunction.getName()}`
-        );
+        let methodSubSignature: MethodSubSignature | undefined;
+        // 遍历所有文件的方法签名映射
+        for (const [_, methodSubSignatureMapArray] of this.methodSubSignatureMap) {
+            const found = methodSubSignatureMapArray.find(map => map.name === `@nodeapiFunction${this.irFunction.getName()}`);
+            if (found) {
+                methodSubSignature = found.methodSubSignature;
+                break;
+            }
+        }
         
+        if (!methodSubSignature) {
+            methodSubSignature = ArkSignatureBuilder.buildMethodSubSignatureFromMethodName(
+                `@nodeapiFunction${this.irFunction.getName()}`
+            );
+        }
+        // 遍历methodSubSignature的参数并设置type
+        for(const param of methodSubSignature.getParameters()){
+            const paramName = param.getName();
+            this.logger.info(`paramName: ${paramName}`);
+            
+            // 从invokeExpr获取对应的参数
+            const args = this.invokeExpr.getArgs();
+            const paramIndex = methodSubSignature.getParameters().indexOf(param);
+            if (paramIndex >= 0 && paramIndex < args.length) {
+                const arg = args[paramIndex];
+                const argType = arg.getType();
+                // 如果argType不是unknown
+                if(!(argType instanceof UnknownType)){
+                    param.setType(argType);
+                    this.logger.info(`Set param ${paramName} type to ${argType}`);
+                }
+            }
+        }
+        
+
         const methodSignature = new MethodSignature(
             this.functionMethod.getDeclaringArkClass().getSignature(),
             methodSubSignature
@@ -104,14 +135,6 @@ export class FunctionBodyRebuilder {
         // 更新方法并添加到声明类
         checkAndUpdateMethod(this.functionMethod, this.declaringClass);
         this.declaringClass.addMethod(this.functionMethod);
-        
-        // TODO: 根据realArgs创建参数
-        // 遍历arkts文件找到node api调用点，找到参数类型，可以结合index.d.ts文件
-        // 遍历napiCalls，找到对应的参数类型
-        for(const napiCall of this.napiCalls){
-            const methodName = napiCall.name;
-            this.logger.info(`methodName: ${methodName}`);
-        }
     }
     
     /**

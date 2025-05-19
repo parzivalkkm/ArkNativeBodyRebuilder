@@ -1,4 +1,4 @@
-import { Type } from "@ArkAnalyzer/src/core/base/Type";
+import { MethodSubSignature } from "@ArkAnalyzer/src/core/model/ArkSignature";
 
 export interface ModuleIR {
     hap_name: string;
@@ -34,8 +34,7 @@ export interface PhiInst extends Inst {
     ret: string;
 }
 
-export interface MethodSignatureIR {
+export interface MethodSubSignatureMap{
     name: string;
-    params: Type[];
-    returnType: Type;
+    methodSubSignature: MethodSubSignature;
 }

@@ -8,11 +8,11 @@ import { ClassSignature, FileSignature } from '@ArkAnalyzer/src/core/model/ArkSi
 
 import { IRModule } from './ir/IRFunction';
 import { FunctionBodyRebuilder } from './core/FunctionBodyRebuilder';
-import { ArkBody } from '@ArkAnalyzer/src/core/model/ArkBody';
-import { ArkAssignStmt } from '@ArkAnalyzer/src/core/base/Stmt';
-import { ArkInstanceInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
-import { MethodSignatureIR } from './ir/JsonObjectInterface';
-import { UnknownType } from '@ArkAnalyzer/src/core/base/Type';
+import { SceneConfig } from '@ArkAnalyzer/src/Config';
+import { IndexdtsUtils } from './IndexdtsUtils';
+import { MethodSubSignatureMap } from './ir/JsonObjectInterface';
+import path from 'path';
+import { ArkBody, ArkInstanceInvokeExpr, ModelUtils } from '@ArkAnalyzer/src';
 
 // 设置日志
 const logPath = 'out/ArkAnalyzer.log';
@@ -28,9 +28,9 @@ export class NativeBodyRebuilder {
     private irFilePath: string;
     private scene: Scene;
     private irModule: IRModule | null = null;
-
-    private napiCalls: MethodSignatureIR[] = [];
-
+    
+    private methodSubSignatureMap: Map<string, MethodSubSignatureMap[]> = new Map();
+    private NapiCallExprMap: Map<string, ArkInstanceInvokeExpr[]> = new Map();
     constructor(irFilePath: string, scene: Scene) {
         this.irFilePath = irFilePath;
         this.scene = scene;
@@ -61,8 +61,10 @@ export class NativeBodyRebuilder {
         const moduleClass = this.createArkClass(moduleFile);
 
         // 5. 遍历Ark Project，找到napi调用并记录
-        this.findNapiCalls();
-        // 5. 遍历函数，重建函数体
+        this.recordNapiCalls();
+        // 6. 导出exportMap
+        this.buildNapiExportMap();
+        // 7. 遍历函数，重建函数体
         this.rebuildFunctionBodies(moduleClass);
     }
     
@@ -139,41 +141,39 @@ export class NativeBodyRebuilder {
         return moduleClass;
     }
 
-        /**
-     * 查找项目中的NAPI调用
-     */
-    public findNapiCalls(): void {
-        const sofuncs: string[] = [];
+    private buildNapiExportMap(): void {
+        // 遍历所有file，找到index.d.ts文件
+        for(const arkFile of this.scene.getFiles()){
+            logger.info(`arkFile name is: ${arkFile.getName()}`);
+            if(arkFile.getName().endsWith('.d.ts') && arkFile.getName().includes('cpp')){
+                const methodSubSignatureMapArray = IndexdtsUtils.buildNapiExportMap(arkFile);
+                const parentDir = path.basename(path.dirname(arkFile.getName()));
+                logger.info(`parentDir is: ${parentDir}`);
+                this.methodSubSignatureMap.set(parentDir, methodSubSignatureMapArray);
+            }
+        }
+    }
+
+    private recordNapiCalls(): void {
+        // 遍历所有arkfile
         for (const arkFile of this.scene.getFiles()) {
-            logger.info('Processing file:', arkFile.getFilePath());
-            // 找到importInfos
+            // 解析import信息
             const importInfos = arkFile.getImportInfos();
+            const importMap = new Map<string, string>();
             for (const importInfo of importInfos) {
-                logger.info(`Import Info: 
-                    Clause Name: ${importInfo.getImportClauseName()}
-                    Type: ${importInfo.getImportType()}
-                    From: ${importInfo.getFrom() || 'undefined'}
-                    Name Before As: ${importInfo.getNameBeforeAs() || 'undefined'}
-                    Position: ${importInfo.getOriginTsPosition()?.toString() || 'undefined'}
-                    Declaring File: ${importInfo.getDeclaringArkFile()?.getFilePath() || 'undefined'}
-                `);
-                // 将importInfo.getFrom()赋值为变量
-                const from = importInfo.getFrom();
-                // 如果来自.so库，判断结尾是否endwiths".so"
-                if(from && from.endsWith(".so")){
-                    sofuncs.push(importInfo.getImportClauseName());
+                if(importInfo.getFrom()?.endsWith('.so')){
+                    logger.info(`importInfo: ${importInfo.toString()}`);
+                    const strImportFrom = importInfo.getFrom()?.split('.so')[0] || '';
+                    importMap.set(importInfo.getImportClauseName(), strImportFrom);
                 }
             }
-            if(sofuncs.length > 0){
-                // 找到这个file的所有函数调用
-                for(const arkClass of arkFile.getClasses()){
+            // 找到所有napi调用并记录
+            if(importMap.size > 0){
+                for(const arkClass of ModelUtils.getAllClassesInFile(arkFile)){
                     for(const arkMethod of arkClass.getMethods()){
                         const body = arkMethod.getBody();
                         if(body){
-                            const methodSignatureIR = this.processNapiCalls(body, sofuncs);
-                            if(methodSignatureIR){
-                                this.napiCalls.push(...methodSignatureIR);
-                            }
+                            this.PraseNapiCall(body, importMap);
                         }
                     }
                 }
@@ -181,51 +181,34 @@ export class NativeBodyRebuilder {
         }
     }
 
-    private processNapiCalls(body: ArkBody, sofuncs: string[]): MethodSignatureIR[] {
+    private PraseNapiCall(body: ArkBody, importMap: Map<string, string>): void {
+        // 遍历body中的所有stmt
         const cfg = body.getCfg();
-        const napiCalls: MethodSignatureIR[] = [];
-        
-        for(const stmt of cfg.getStmts()){
-            if(stmt.containsInvokeExpr()){
-                // 打印stmt
-                logger.info(`Stmt: ${stmt.toString()}`);
-                if(stmt instanceof ArkAssignStmt){
-                    const leftOp = stmt.getLeftOp();
-                    logger.info(`leftOp: ${leftOp.getType()}`);
-                }
-                const invokeExpr = stmt.getInvokeExpr();
-                // 打印invokeExpr
-                logger.info(`Invoke Expr: ${invokeExpr?.toString()}`);
-                if(invokeExpr){
-                    const methodSignature = invokeExpr.getMethodSignature();
-                    const methodName = methodSignature.getMethodSubSignature().getMethodName();
-                    if(invokeExpr instanceof ArkInstanceInvokeExpr){
-                        const base = invokeExpr.getBase();
-                        logger.info(`base: ${base.toString()}`);
-                        if(sofuncs.includes(base.toString())){
-                            logger.info(`include napi call: ${methodName}`);
-                            napiCalls.push({
-                                name: methodName,
-                                params: invokeExpr.getArgs().map(arg => arg.getType()),
-                                returnType: UnknownType.getInstance()
-                            });
+        for(const threeAddressStmt of cfg.getStmts()){
+            if(threeAddressStmt.containsInvokeExpr()){
+                const invokeExpr = threeAddressStmt.getInvokeExpr();
+                if(invokeExpr instanceof ArkInstanceInvokeExpr){
+                    logger.info(`invokeExpr: ${invokeExpr.toString()}`);
+                    // getbase
+                    const base = invokeExpr.getBase();
+                    const basename = base.getName();
+                    if(importMap.has(basename)){
+                        const importFrom = importMap.get(basename);
+                        logger.info(`importFrom: ${importFrom}`);
+                        // 获取invokeExpr的签名
+                        const methodSignature = invokeExpr.getMethodSignature();
+                        logger.info(`methodSignature: ${methodSignature.toString()}`);
+                        if (importFrom) {
+                            const existingExprs = this.NapiCallExprMap.get(importFrom) || [];
+                            existingExprs.push(invokeExpr);
+                            this.NapiCallExprMap.set(importFrom, existingExprs);
                         }
-                    }
-                    // 打印methodsignature
-                    logger.info(`Method Signature: ${methodSignature.toString()}`);
-                    // 打印methodname
-                    logger.info(`Method Name: ${methodName}`);
-                    // getargs
-                    const args = invokeExpr.getArgs();
-                    logger.info(`args: ${args.toString()}`);
-                    for(const arg of args){
-                        logger.info(`arg: ${arg.getType()}`);
                     }
                 }
             }
         }
-        return napiCalls;
     }
+
     /**
      * 重建所有函数体
      */
@@ -233,18 +216,44 @@ export class NativeBodyRebuilder {
         if (!this.irModule) {
             throw new Error('IRModule is not initialized');
         }
+
+        // 遍历所有napicallexpr，为每一个调用创建对应的函数
+        for(const [importFrom, invokeExprs] of this.NapiCallExprMap.entries()){
+            logger.info(`importFrom: ${importFrom}`);
+            const libname = importFrom ? importFrom.replace(/^lib/, '') : '';
+            if(this.irModule.getModuleName() === libname){
+                for(const invokeExpr of invokeExprs){
+                    logger.info(`invokeExpr: ${invokeExpr.toString()}`);
+                    // get invoke Expr name
+                    const invokeExprName = invokeExpr.getMethodSignature().getMethodSubSignature().getMethodName();
+                    const irFunction = this.irModule.getFunctionByName(invokeExprName);
+                    if(irFunction){
+                        logger.info(`irFunction: ${irFunction.getName()}`);
+                    }
+                    else{
+                        logger.info(`irFunction not found`);
+                    }
+                    // 为每个函数创建FunctionBodyRebuilder
+                    if (irFunction) {
+                        const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap, invokeExpr);
+                        // 重建函数体
+                        rebuilder.rebuildFunctionBody();
+                    }
+                }
+            }
+        }
         
+
         // 遍历所有函数
-        // TODO这里需要在每一次的调用上下文完成
-        this.irModule.getFunctions().forEach(irFunction => {
-            logger.info(`Processing function: ${irFunction.getName()}`);
+        // this.irModule.getFunctions().forEach(irFunction => {
+        //     logger.info(`Processing function: ${irFunction.getName()}`);
             
-            // 为每个函数创建FunctionBodyRebuilder
-            const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.napiCalls);
+        //     // 为每个函数创建FunctionBodyRebuilder
+        //     const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap);
             
-            // 重建函数体
-            rebuilder.rebuildFunctionBody();
-        });
+        //     // 重建函数体
+        //     rebuilder.rebuildFunctionBody();
+        // });
     }
 
     public printModuleDetails(): void {
@@ -267,5 +276,15 @@ export class NativeBodyRebuilder {
     }
 }
 
+// 运行示例
+const irFilePath = "./NativeBodyRebuilder/test_resources/native_complex/libentry.so.ir.json";
+const projectDir = 'tests/resources/ohTest/HarmonyNativeFlowBench/native_complex';
+const sceneConfig = new SceneConfig({ enableTrailingComments: true, enableLeadingComments: true });
+sceneConfig.buildFromProjectDir(projectDir);
 
+const scene = new Scene();
+scene.buildSceneFromProjectDir(sceneConfig);
+scene.inferTypes();
+const nativeBodyRebuilder = new NativeBodyRebuilder(irFilePath, scene);
+nativeBodyRebuilder.rebuildNativeBody();
 

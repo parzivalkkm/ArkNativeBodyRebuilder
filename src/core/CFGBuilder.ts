@@ -12,7 +12,7 @@ import { ArkArrayRef, ArkInstanceFieldRef, ArkParameterRef } from '@ArkAnalyzer/
 import { ArkInstanceOfExpr, ArkNewArrayExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { Constant, NullConstant, NumberConstant, StringConstant } from '@ArkAnalyzer/src/core/base/Constant';
 import { ValueUtil } from '@ArkAnalyzer/src/core/common/ValueUtil';
-import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType, FunctionType } from '@ArkAnalyzer/src/core/base/Type';
+import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType } from '@ArkAnalyzer/src/core/base/Type';
 import { Value } from '@ArkAnalyzer/src/core/base/Value';
 import { ClassSignature, FieldSignature, FileSignature, MethodSignature, MethodSubSignature, NamespaceSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import { MethodParameter } from '@ArkAnalyzer/src/core/model/builder/ArkMethodBuilder';
@@ -854,14 +854,6 @@ export class CFGBuilder {
      */
     private processFunctionCall(callInst: IRCallInstruction, currentBlock: BasicBlock): BasicBlock {
         // 处理函数调用
-        // const target = callInst.getTarget();
-        // const operands = callInst.getOperands();
-
-        // if (target === 'napi_call_function') {
-        //     const arsList = callInst.getArgsOperands();
-        //     // 调用函数
-        // }
-        FunctionType
         return currentBlock;
     }
 
