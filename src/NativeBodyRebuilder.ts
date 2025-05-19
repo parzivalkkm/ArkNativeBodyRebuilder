@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { LOG_LEVEL, LOG_MODULE_TYPE } from '@ArkAnalyzer/src/utils/logger';
 import ConsoleLogger from '@ArkAnalyzer/src/utils/logger';
 import { Scene } from '@ArkAnalyzer/src/Scene';
-import { ArkFile } from '@ArkAnalyzer/src/core/model/ArkFile';
+import { ArkFile, Language } from '@ArkAnalyzer/src/core/model/ArkFile';
 import { ArkClass } from '@ArkAnalyzer/src/core/model/ArkClass';
 import { ClassSignature, FileSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 
@@ -104,7 +104,7 @@ export class NativeBodyRebuilder {
             throw new Error('IRModule is not initialized');
         }
         
-        const moduleFile = new ArkFile();
+        const moduleFile = new ArkFile(Language.TYPESCRIPT);
         moduleFile.setScene(this.scene);
         
         const moduleFileSignature = new FileSignature(
