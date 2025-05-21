@@ -115,7 +115,6 @@ export class FunctionBodyRebuilder {
             if (paramIndex >= 0 && paramIndex < args.length) {
                 const arg = args[paramIndex];
                 const argType = arg.getType();
-                // 如果argType不是unknown
                 if(!(argType instanceof UnknownType)){
                     param.setType(argType);
                     this.logger.info(`Set param ${paramName} type to ${argType}`);
@@ -128,6 +127,7 @@ export class FunctionBodyRebuilder {
             this.functionMethod.getDeclaringArkClass().getSignature(),
             methodSubSignature
         );
+        this.invokeExpr.setMethodSignature(methodSignature);
         
         this.functionMethod.setImplementationSignature(methodSignature);
         this.functionMethod.setLineCol(0);

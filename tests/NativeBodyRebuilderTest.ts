@@ -1,13 +1,16 @@
 import { SceneConfig } from '@ArkAnalyzer/src/Config';
 import { Scene } from '@ArkAnalyzer/src/Scene';
 import { DummyMainCreater } from "@ArkAnalyzer/src/core/common/DummyMainCreater";
-import { TaintAnalysisChecker} from "taintanalysis/TaintAnalysis";
+import { TaintAnalysisChecker} from "src/taintanalysis/TaintAnalysis";
 import * as fs from 'fs';
-import { TaintAnalysisSolver } from "taintanalysis/TaintAnalysisSolver";
+import { TaintAnalysisSolver } from "src/taintanalysis/TaintAnalysisSolver";
 import Logger, { LOG_MODULE_TYPE, LOG_LEVEL } from '@ArkAnalyzer/src/utils/logger';
 import { PointerAnalysisConfig } from "@ArkAnalyzer/src/callgraph/pointerAnalysis/PointerAnalysisConfig";
 import { PointerAnalysis } from "@ArkAnalyzer/src/callgraph/pointerAnalysis/PointerAnalysis";
 import { NativeBodyRebuilder } from 'src/NativeBodyRebuilder';
+import { classInheritsAbility } from 'src/taintanalysis/Util';
+import { callSource } from 'src/taintanalysis/Util';
+import { Source } from 'src/taintanalysis/Source';
 
 Logger.configure('out/HapFlow.log', LOG_LEVEL.ERROR)
 const logger = Logger.getLogger(LOG_MODULE_TYPE.ARKANALYZER, 'HapFlow');
@@ -53,5 +56,27 @@ const solver = new TaintAnalysisSolver(problem, scene, pta);
 solver.solve();
 const o = problem.getOutcome()
 logger.info('====== Taint Analysis Done');
+let codeLines = 0;
+    for (const file of scene.getFiles()) {
+        codeLines += file.getCode().split(/\r\n|\r|\n/).length
+    }
+    let content = `${JSON.parse(fs.readFileSync(config_path, "utf8")).targetProjectDirectory}, lines: ${codeLines}, edgeNum: ${solver.getPathEdgeSet().size}\n`;
+    let con1 = '';
+if (o.length > 0) {
+    for (const t of o) {
+        for (const stmt of t.getPath()) {
+            let text = stmt.getOriginalText();
+            if (text?.includes('\n')) {
+                text = text.split('\n')[0];
+            }
+            content += text + ',  ';
+            con1 += stmt.toString() + ', ';
+        }
+        content += '\n';
+        con1 += '\n';
+    }
+    content += con1;
+    content += '\n';
+}
 debugger
 

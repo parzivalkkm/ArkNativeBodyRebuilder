@@ -1,11 +1,10 @@
-
 import { SceneConfig } from "@ArkAnalyzer/src/Config";
 import { Scene } from "@ArkAnalyzer/src/Scene";
 import { DummyMainCreater } from "@ArkAnalyzer/src/core/common/DummyMainCreater";
 // import { DummyMainCreater } from "../src/DummyMainCreater";
-import { TaintAnalysisChecker} from "taintanalysis/TaintAnalysis";
+import { TaintAnalysisChecker} from "src/taintanalysis/TaintAnalysis";
 import * as fs from 'fs';
-import { TaintAnalysisSolver } from "taintanalysis/TaintAnalysisSolver";
+import { TaintAnalysisSolver } from "src/taintanalysis/TaintAnalysisSolver";
 import Logger, { LOG_MODULE_TYPE, LOG_LEVEL } from '@ArkAnalyzer/src/utils/logger';
 import { PointerAnalysisConfig } from "@ArkAnalyzer/src/callgraph/pointerAnalysis/PointerAnalysisConfig";
 import { PointerAnalysis } from "@ArkAnalyzer/src/callgraph/pointerAnalysis/PointerAnalysis";

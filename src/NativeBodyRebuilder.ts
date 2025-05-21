@@ -238,6 +238,8 @@ export class NativeBodyRebuilder {
                         const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap, invokeExpr);
                         // 重建函数体
                         rebuilder.rebuildFunctionBody();
+
+                        logger.info(`rebuilder done`);
                     }
                 }
             }
@@ -277,14 +279,14 @@ export class NativeBodyRebuilder {
 }
 
 // 运行示例
-const irFilePath = "./NativeBodyRebuilder/test_resources/native_complex/libentry.so.ir.json";
-const projectDir = 'tests/resources/ohTest/HarmonyNativeFlowBench/native_complex';
-const sceneConfig = new SceneConfig({ enableTrailingComments: true, enableLeadingComments: true });
-sceneConfig.buildFromProjectDir(projectDir);
+// const irFilePath = "./NativeBodyRebuilder/test_resources/native_complex/libentry.so.ir.json";
+// const projectDir = 'tests/resources/HarmonyNativeFlowBench/native_complex';
+// const sceneConfig = new SceneConfig({ enableTrailingComments: true, enableLeadingComments: true });
+// sceneConfig.buildFromProjectDir(projectDir);
 
-const scene = new Scene();
-scene.buildSceneFromProjectDir(sceneConfig);
-scene.inferTypes();
-const nativeBodyRebuilder = new NativeBodyRebuilder(irFilePath, scene);
-nativeBodyRebuilder.rebuildNativeBody();
+// const scene = new Scene();
+// scene.buildSceneFromProjectDir(sceneConfig);
+// scene.inferTypes();
+// const nativeBodyRebuilder = new NativeBodyRebuilder(irFilePath, scene);
+// nativeBodyRebuilder.rebuildNativeBody();
 

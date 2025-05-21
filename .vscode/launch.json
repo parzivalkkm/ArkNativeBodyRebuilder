@@ -18,7 +18,13 @@
       
       // "args": ["tests/TaintAnalysisTest.ts"]
       // "args": ["tests/BatchTest.ts"]
-      "args": ["tests/NativeBodyRebuilderTest.ts"]
+      "args": ["tests/NativeBodyRebuilderTest.ts"],
+      // "args": ["tests/OHTest.ts"]
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "!**/node_modules/**",
+        "**/arkanalyzer/**"
+      ]
     }
   ]
 }
