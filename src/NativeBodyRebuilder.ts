@@ -12,7 +12,7 @@ import { SceneConfig } from '@ArkAnalyzer/src/Config';
 import { IndexdtsUtils } from './IndexdtsUtils';
 import { MethodSubSignatureMap } from './ir/JsonObjectInterface';
 import path from 'path';
-import { ArkBody, ArkInstanceInvokeExpr, ModelUtils } from '@ArkAnalyzer/src';
+import { ArkBody, ArkInstanceInvokeExpr, ArkMethod, ModelUtils } from '@ArkAnalyzer/src';
 
 // 设置日志
 const logPath = 'out/ArkAnalyzer.log';
@@ -35,6 +35,8 @@ export class NativeBodyRebuilder {
         this.irFilePath = irFilePath;
         this.scene = scene;
     }
+
+    private rebuiltBodys: Array<ArkMethod> = [];
     
     /**
      * 重建Native函数体
@@ -237,7 +239,7 @@ export class NativeBodyRebuilder {
                     if (irFunction) {
                         const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap, invokeExpr);
                         // 重建函数体
-                        rebuilder.rebuildFunctionBody();
+                        this.rebuiltBodys.push(rebuilder.rebuildFunctionBody());
 
                         logger.info(`rebuilder done`);
                     }

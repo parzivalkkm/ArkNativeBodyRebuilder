@@ -54,7 +54,7 @@ export class FunctionBodyRebuilder {
     /**
      * 重建函数体
      */
-    public rebuildFunctionBody(): void {
+    public rebuildFunctionBody(): ArkMethod {
         this.logger.info(`Rebuilding function body for: ${this.irFunction.getName()}`);
         
         // 1. 分析def-use关系
@@ -80,6 +80,8 @@ export class FunctionBodyRebuilder {
         // 6. 将方法添加到场景中
         this.scene.addToMethodsMap(this.functionMethod);
         this.logger.info(`invokeExpr: ${this.invokeExpr.toString()}`);
+
+        return this.functionMethod
     }
     
     /**
