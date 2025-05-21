@@ -8,11 +8,11 @@ import { Local } from '@ArkAnalyzer/src/core/base/Local';
 import { Cfg } from '@ArkAnalyzer/src/core/graph/Cfg';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
 import { ArkAssignStmt, ArkInvokeStmt, ArkReturnStmt, ArkReturnVoidStmt } from '@ArkAnalyzer/src/core/base/Stmt';
-import { ArkArrayRef, ArkInstanceFieldRef, ArkParameterRef } from '@ArkAnalyzer/src/core/base/Ref';
+import { ArkArrayRef, ArkInstanceFieldRef, ArkParameterRef, ArkThisRef } from '@ArkAnalyzer/src/core/base/Ref';
 import { ArkInstanceOfExpr, ArkNewArrayExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { Constant, NullConstant, NumberConstant, StringConstant } from '@ArkAnalyzer/src/core/base/Constant';
 import { ValueUtil } from '@ArkAnalyzer/src/core/common/ValueUtil';
-import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType } from '@ArkAnalyzer/src/core/base/Type';
+import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType, ClassType } from '@ArkAnalyzer/src/core/base/Type';
 import { Value } from '@ArkAnalyzer/src/core/base/Value';
 import { ClassSignature, FieldSignature, FileSignature, MethodSignature, MethodSubSignature, NamespaceSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import { MethodParameter } from '@ArkAnalyzer/src/core/model/builder/ArkMethodBuilder';
@@ -45,7 +45,7 @@ export class CFGBuilder {
         // 构建第一个基本块并处理参数
         const firstBlock = new BasicBlock();
         this.processParameters(firstBlock);
-        
+        this.createThisLocal(firstBlock);
         // 处理指令
         let currentBlock = firstBlock;
         
@@ -110,6 +110,20 @@ export class CFGBuilder {
                 firstBlock.addStmt(paramAssignStmt);
             });
         }
+    }
+
+    private createThisLocal(firstBlock: BasicBlock): void {
+        // 创建this引用
+        const thisType = new ClassType(this.arkMethod.getDeclaringArkClass().getSignature(), undefined);
+        const thisLocal = new Local("this", thisType);
+        const thisRef = new ArkThisRef(thisType);
+        this.varLocalMap.set("this", thisLocal);
+        
+        // 创建赋值语句
+        const thisAssignStmt = new ArkAssignStmt(thisLocal, thisRef);
+        thisLocal.setDeclaringStmt(thisAssignStmt);
+
+        firstBlock.addStmt(thisAssignStmt);
     }
     
     /**
