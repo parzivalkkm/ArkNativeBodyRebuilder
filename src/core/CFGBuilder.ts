@@ -82,11 +82,11 @@ export class CFGBuilder {
             }
             // 如果方法已有参数定义，为每个参数创建Local并添加赋值语句
             methodParams.forEach((param, index) => {
-                const paramRef = new ArkParameterRef(index, param.getType());
-                const paramLocal = new Local(param.getName(), paramRef.getType());
-
                 const correspondingArg = realArgs[index];
                 const paramName = correspondingArg.getName();
+                
+                const paramRef = new ArkParameterRef(index, param.getType());
+                const paramLocal = new Local(paramName, paramRef.getType());
                 this.varLocalMap.set(paramName, paramLocal);
                 
                 const paramAssignStmt = new ArkAssignStmt(paramLocal, paramRef);
