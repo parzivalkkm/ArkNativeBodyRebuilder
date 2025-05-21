@@ -90,6 +90,8 @@ export class CFGBuilder {
                 this.varLocalMap.set(paramName, paramLocal);
                 
                 const paramAssignStmt = new ArkAssignStmt(paramLocal, paramRef);
+                paramLocal.setDeclaringStmt(paramAssignStmt);
+
                 firstBlock.addStmt(paramAssignStmt);
             });
         } else {
@@ -103,6 +105,8 @@ export class CFGBuilder {
                 // 创建参数引用并添加赋值语句
                 const paramRef = new ArkParameterRef(index, argType);
                 const paramAssignStmt = new ArkAssignStmt(paramLocal, paramRef);
+                paramLocal.setDeclaringStmt(paramAssignStmt);
+
                 firstBlock.addStmt(paramAssignStmt);
             });
         }
@@ -245,6 +249,8 @@ export class CFGBuilder {
             if (cppNumberValue instanceof NumberConstant) {
                 const local = new Local(`%number_${this.constIdCounter++}`, cppNumberValue.getType());
                 const assignStmt = new ArkAssignStmt(local, cppNumberValue);
+                local.setDeclaringStmt(assignStmt);
+
                 currentBlock.addStmt(assignStmt);
                 
                 // 设置结果变量的Value
@@ -339,6 +345,7 @@ export class CFGBuilder {
                 // 如果是字符串常量，创建一个新的Local
                 const local = new Local(`%string_${this.constIdCounter++}`, StringType.getInstance());
                 const assignStmt = new ArkAssignStmt(local, stringValue);
+                local.setDeclaringStmt(assignStmt);
                 currentBlock.addStmt(assignStmt);
                 
                 // 设置结果变量的Value
@@ -414,6 +421,7 @@ export class CFGBuilder {
             const fieldSignature = new FieldSignature("length", unknownBaseSignature,UnknownType. getInstance(), false);
             const refExpr = new ArkInstanceFieldRef(stringValue as Local, fieldSignature);
             const lengthAssignStmt = new ArkAssignStmt(lengthLocal, refExpr);
+            lengthLocal.setDeclaringStmt(lengthAssignStmt);
             currentBlock.addStmt(lengthAssignStmt);
 
             
@@ -456,6 +464,7 @@ export class CFGBuilder {
                     const local = new Local(`%bool_${this.constIdCounter++}`, BooleanType.getInstance());
                     const assignStmt = new ArkAssignStmt(local, boolValue);
                     currentBlock.addStmt(assignStmt);
+                    local.setDeclaringStmt(assignStmt);
                     
                     // 设置结果变量的Value
                     resultVar.setArktsValue(local);
@@ -527,6 +536,7 @@ export class CFGBuilder {
             const local = new Local(`%const_${this.constIdCounter++}`, constant.getType());
             const assignStmt = new ArkAssignStmt(local, constant);
             currentBlock.addStmt(assignStmt);
+            local.setDeclaringStmt(assignStmt);
             
             resultVar.setArktsValue(local);
             this.varLocalMap.set(resultVar.getName(), local);
@@ -548,6 +558,7 @@ export class CFGBuilder {
                 // 创建对应赋值语句
                 const newArray = new ArkNewArrayExpr(arrayType, ValueUtil.getOrCreateNumberConst(0), true); // TODO: 不确定fromliteral是什么意思
                 const assignStmt = new ArkAssignStmt(local, newArray);
+                local.setDeclaringStmt(assignStmt);
                 currentBlock.addStmt(assignStmt);
 
                 resultVar.setArktsValue(local);
@@ -576,6 +587,7 @@ export class CFGBuilder {
                 // 创建对应赋值语句
                 const newArray = new ArkNewArrayExpr(arrayType, lengthValue, true); // TODO: 不确定fromliteral是什么意思
                 const assignStmt = new ArkAssignStmt(local, newArray);
+                local.setDeclaringStmt(assignStmt);
                 currentBlock.addStmt(assignStmt);
 
                 resultVar.setArktsValue(local);
@@ -605,6 +617,7 @@ export class CFGBuilder {
                 const refExpr = new ArkInstanceFieldRef(arrayValue, fieldSignature);
                 const assignStmt = new ArkAssignStmt(local, refExpr);
                 currentBlock.addStmt(assignStmt);
+                local.setDeclaringStmt(assignStmt);
                 
                 resultVar.setArktsValue(local);
                 this.varLocalMap.set(resultVar.getName(), local);
@@ -630,6 +643,7 @@ export class CFGBuilder {
                 const local = new Local(`%is_array_${this.constIdCounter++}`, BooleanType.getInstance());
                 const instanceofExpr = new ArkInstanceOfExpr(arrayValue, new ArrayType(AnyType.getInstance(), 1));  // TODO: 这里的类型是否需要宽泛
                 const assignStmt = new ArkAssignStmt(local, instanceofExpr);
+                local.setDeclaringStmt(assignStmt);
                 currentBlock.addStmt(assignStmt);
                 
                 this.varLocalMap.set(isArrayReturnVar.getName(), local);
@@ -694,6 +708,7 @@ export class CFGBuilder {
                 const local = new Local(`%get_element_${this.constIdCounter++}`, AnyType.getInstance()); // TODO: 暂时设为AnyType，可能需要改进
                 const arrayRef = new ArkArrayRef(objectValue as Local, indexValue);
                 const assignStmt = new ArkAssignStmt(local, arrayRef);
+                local.setDeclaringStmt(assignStmt);
                 currentBlock.addStmt(assignStmt);
                 this.varLocalMap.set(resultVar.getName(), local);
                 resultVar.setArktsValue(local);
@@ -722,10 +737,12 @@ export class CFGBuilder {
             // 创建一个新的字符串类型的Local
             const local = new Local(`%alloc_${this.constIdCounter++}`, StringType.getInstance());
             
+            
             // 创建一个空字符串常量
-            // const emptyString = ValueUtil.createStringConst("");
-            // const assignStmt = new ArkAssignStmt(local, emptyString);
-            // currentBlock.addStmt(assignStmt);
+            const emptyString = ValueUtil.createStringConst("");
+            const assignStmt = new ArkAssignStmt(local, emptyString);
+            local.setDeclaringStmt(assignStmt);
+            currentBlock.addStmt(assignStmt);
             
             resultVar.setArktsValue(local);
             this.varLocalMap.set(resultVar.getName(), local);
@@ -1032,6 +1049,8 @@ export class CFGBuilder {
         
         // 创建赋值语句
         const phiStmt = new ArkAssignStmt(resultLocal, phiExpr);
+        resultLocal.setDeclaringStmt(phiStmt);
+
         currentBlock.addStmt(phiStmt);
         
         // 更新映射
