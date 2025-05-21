@@ -17,5 +17,6 @@
       "@ArkAnalyzer/*": ["../arkanalyzer/*"]
     },
     "strictPropertyInitialization": false,
+    "sourceMap": true,
   }
 }

@@ -71,20 +71,29 @@ export class CFGBuilder {
     private processParameters(firstBlock: BasicBlock): void {
         // 获取方法参数
         const methodParams = this.arkMethod.getParameters();
-        
+        const realArgs = this.irFunction.getRealArgs();
+        // TODO: 存在问题
+        // 如果方法参数已经定义，则使用这些参数，但是如果和真正参数不一致怎么办？
+
+
         if (methodParams.length > 0) {
+            if (this.irFunction.getRealArgs().length !== methodParams.length) {
+                this.logger.error(`Mismatch between method parameters and real arguments.`);
+            }
             // 如果方法已有参数定义，为每个参数创建Local并添加赋值语句
             methodParams.forEach((param, index) => {
+                const correspondingArg = realArgs[index];
+                const paramName = correspondingArg.getName();
+                
                 const paramRef = new ArkParameterRef(index, param.getType());
-                const paramLocal = new Local(param.getName(), paramRef.getType());
-                this.varLocalMap.set(param.getName(), paramLocal);
+                const paramLocal = new Local(paramName, paramRef.getType());
+                this.varLocalMap.set(paramName, paramLocal);
                 
                 const paramAssignStmt = new ArkAssignStmt(paramLocal, paramRef);
                 firstBlock.addStmt(paramAssignStmt);
             });
         } else {
             // 否则使用提取的真正参数
-            const realArgs = this.irFunction.getRealArgs();
             realArgs.forEach((arg, index) => {
                 // 为每个真正参数创建对应的Local
                 const argType = this.mapValueTypeToArkType(arg.getValueType());
