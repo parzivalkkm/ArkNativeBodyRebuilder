@@ -25,9 +25,7 @@ scene.buildScene4HarmonyProject();
 
 scene.inferTypes()
 
-// 重建native body
-const projectDir = 'D:\\WorkSpace\\ArkTS_Native\\Benchmarks\\OpenHarmony\\native_leak'; // 要分析的项目目录
-const irFilePath = "tests/resources/test_resources/native_leak/libentry.so.ir.json"; // 生成的IR文件路径
+const irFilePath = "tests/resources/test_resources/native_complex/libentry.so.ir.json"; // 生成的IR文件路径
 
 // 创建NativeBodyRebuilder实例
 const nativeBodyRebuilder = new NativeBodyRebuilder(irFilePath, scene);
@@ -36,47 +34,47 @@ nativeBodyRebuilder.rebuildNativeBody();
 // 结束后再次进行类型推断
 scene.inferTypes()
 
-const creater = new DummyMainCreater(scene);
-const ms = scene.getMethods()
+// const creater = new DummyMainCreater(scene);
+// const ms = scene.getMethods()
 
-creater.setEntryMethods(ms)
-creater.createDummyMain();
+// creater.setEntryMethods(ms)
+// creater.createDummyMain();
 
-const dummyMain = creater.getDummyMain();
+// const dummyMain = creater.getDummyMain();
 
-let ptaConfig = PointerAnalysisConfig.create(1, "./out");
-let pta : PointerAnalysis | undefined = PointerAnalysis.pointerAnalysisForWholeProject(scene, ptaConfig);
+// let ptaConfig = PointerAnalysisConfig.create(1, "./out");
+// let pta : PointerAnalysis | undefined = PointerAnalysis.pointerAnalysisForWholeProject(scene, ptaConfig);
 
 
-const problem = new TaintAnalysisChecker([...dummyMain.getCfg()!.getBlocks()][0].getStmts()[dummyMain.getParameters().length], dummyMain, pta);
-problem.addSinksFromJson("tests/resources/sink.json");
-problem.addSourcesFromJson("tests/resources/source.json");
-problem.addSantizationsFromJson("tests/resources/santizationPath.json")
-const solver = new TaintAnalysisSolver(problem, scene, pta);
-solver.solve();
-const o = problem.getOutcome()
-logger.info('====== Taint Analysis Done');
-let codeLines = 0;
-    for (const file of scene.getFiles()) {
-        codeLines += file.getCode().split(/\r\n|\r|\n/).length
-    }
-    let content = `${JSON.parse(fs.readFileSync(config_path, "utf8")).targetProjectDirectory}, lines: ${codeLines}, edgeNum: ${solver.getPathEdgeSet().size}\n`;
-    let con1 = '';
-if (o.length > 0) {
-    for (const t of o) {
-        for (const stmt of t.getPath()) {
-            let text = stmt.getOriginalText();
-            if (text?.includes('\n')) {
-                text = text.split('\n')[0];
-            }
-            content += text + ',  ';
-            con1 += stmt.toString() + ', ';
-        }
-        content += '\n';
-        con1 += '\n';
-    }
-    content += con1;
-    content += '\n';
-}
+// const problem = new TaintAnalysisChecker([...dummyMain.getCfg()!.getBlocks()][0].getStmts()[dummyMain.getParameters().length], dummyMain, pta);
+// problem.addSinksFromJson("tests/resources/sink.json");
+// problem.addSourcesFromJson("tests/resources/source.json");
+// problem.addSantizationsFromJson("tests/resources/santizationPath.json")
+// const solver = new TaintAnalysisSolver(problem, scene, pta);
+// solver.solve();
+// const o = problem.getOutcome()
+// logger.info('====== Taint Analysis Done');
+// let codeLines = 0;
+//     for (const file of scene.getFiles()) {
+//         codeLines += file.getCode().split(/\r\n|\r|\n/).length
+//     }
+//     let content = `${JSON.parse(fs.readFileSync(config_path, "utf8")).targetProjectDirectory}, lines: ${codeLines}, edgeNum: ${solver.getPathEdgeSet().size}\n`;
+//     let con1 = '';
+// if (o.length > 0) {
+//     for (const t of o) {
+//         for (const stmt of t.getPath()) {
+//             let text = stmt.getOriginalText();
+//             if (text?.includes('\n')) {
+//                 text = text.split('\n')[0];
+//             }
+//             content += text + ',  ';
+//             con1 += stmt.toString() + ', ';
+//         }
+//         content += '\n';
+//         con1 += '\n';
+//     }
+//     content += con1;
+//     content += '\n';
+// }
 debugger
 

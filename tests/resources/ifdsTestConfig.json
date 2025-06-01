@@ -1,6 +1,6 @@
 {
     "targetProjectName": "TaintTest",    
-    "targetProjectDirectory": "D:\\workdir\\HUAWEI\\hormonyos\\code\\ArkNativeBodyRebuilder\\tests\\resources\\HarmonyNativeFlowBench\\native_leak",
+    "targetProjectDirectory": "D:\\workdir\\HUAWEI\\hormonyos\\code\\HarmonyNativeFlowBench\\native_complex",
 
     "logPath": "out/ArkAnalyzer.log",
     "logLevel": "DEBUG",

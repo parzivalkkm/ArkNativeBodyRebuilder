@@ -111,16 +111,14 @@ export class FunctionBodyRebuilder {
             const paramName = param.getName();
             this.logger.info(`paramName: ${paramName}`);
             
-            // 从invokeExpr获取对应的参数
+            // 替换成invokeExpr的type
             const args = this.invokeExpr.getArgs();
             const paramIndex = methodSubSignature.getParameters().indexOf(param);
             if (paramIndex >= 0 && paramIndex < args.length) {
                 const arg = args[paramIndex];
                 const argType = arg.getType();
-                if(!(argType instanceof UnknownType)){
-                    param.setType(argType);
-                    this.logger.info(`Set param ${paramName} type to ${argType}`);
-                }
+                param.setType(argType);
+                this.logger.info(`Set param ${paramName} type to ${argType}`);
             }
         }
         
@@ -144,7 +142,7 @@ export class FunctionBodyRebuilder {
      */
     private buildFunctionCFG(): void {
         // 创建CFG构建器
-        const cfgBuilder = new CFGBuilder(this.irFunction, this.functionMethod, this.logger);
+        const cfgBuilder = new CFGBuilder(this.irFunction, this.functionMethod, this.logger, this.invokeExpr);
         
         // 构建CFG
         const cfg = cfgBuilder.buildCFG();

@@ -9,13 +9,14 @@ import { Cfg } from '@ArkAnalyzer/src/core/graph/Cfg';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
 import { ArkAssignStmt, ArkInvokeStmt, ArkReturnStmt, ArkReturnVoidStmt } from '@ArkAnalyzer/src/core/base/Stmt';
 import { ArkArrayRef, ArkInstanceFieldRef, ArkParameterRef, ArkThisRef } from '@ArkAnalyzer/src/core/base/Ref';
-import { ArkInstanceOfExpr, ArkNewArrayExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
+import { ArkInstanceInvokeExpr, ArkInstanceOfExpr, ArkNewArrayExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { Constant, NullConstant, NumberConstant, StringConstant } from '@ArkAnalyzer/src/core/base/Constant';
 import { ValueUtil } from '@ArkAnalyzer/src/core/common/ValueUtil';
-import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType, ClassType } from '@ArkAnalyzer/src/core/base/Type';
+import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType, ClassType, FunctionType } from '@ArkAnalyzer/src/core/base/Type';
 import { Value } from '@ArkAnalyzer/src/core/base/Value';
 import { ClassSignature, FieldSignature, FileSignature, MethodSignature, MethodSubSignature, NamespaceSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import { MethodParameter } from '@ArkAnalyzer/src/core/model/builder/ArkMethodBuilder';
+import { GLOBAL_THIS_NAME } from '@ArkAnalyzer/src/core/common/TSConst';
 
 /**
  * 负责构建CFG的类
@@ -24,15 +25,19 @@ export class CFGBuilder {
     private logger: Logger;
     private irFunction: IRFunction;
     private arkMethod: ArkMethod;
+    private arkinvokeExpr: ArkInstanceInvokeExpr;
     
     // 存储变量到Local的映射
     private varLocalMap: Map<string, Local> = new Map();
+    // 存储Local到参数索引的映射
+    private paramIndexMap: Map<Local, number> = new Map();
     private constIdCounter: number = 0;
     
-    constructor(irFunction: IRFunction, arkMethod: ArkMethod, logger: Logger) {
+    constructor(irFunction: IRFunction, arkMethod: ArkMethod, logger: Logger, invokeExpr: ArkInstanceInvokeExpr) {
         this.irFunction = irFunction;
         this.arkMethod = arkMethod;
         this.logger = logger;
+        this.arkinvokeExpr = invokeExpr;
     }
     
     /**
@@ -88,6 +93,8 @@ export class CFGBuilder {
                 const paramRef = new ArkParameterRef(index, param.getType());
                 const paramLocal = new Local(paramName, paramRef.getType());
                 this.varLocalMap.set(paramName, paramLocal);
+                // 记录参数索引
+                this.paramIndexMap.set(paramLocal, index);
                 
                 const paramAssignStmt = new ArkAssignStmt(paramLocal, paramRef);
                 paramLocal.setDeclaringStmt(paramAssignStmt);
@@ -101,6 +108,8 @@ export class CFGBuilder {
                 const argType = this.mapValueTypeToArkType(arg.getValueType());
                 const paramLocal = new Local(arg.getName(), argType);
                 this.varLocalMap.set(arg.getName(), paramLocal);
+                // 记录参数索引
+                this.paramIndexMap.set(paramLocal, index);
                 
                 // 创建参数引用并添加赋值语句
                 const paramRef = new ArkParameterRef(index, argType);
@@ -894,6 +903,106 @@ export class CFGBuilder {
      */
     private processFunctionCall(callInst: IRCallInstruction, currentBlock: BasicBlock): BasicBlock {
         // 处理函数调用
+        const target = callInst.getTarget();
+        const operands = callInst.getOperands();
+        if(target === "napi_get_global"){
+            // 获取global对象，返回值1
+            const globalVar = this.findReturnValueByIndex(callInst, "1");
+            if (globalVar) {
+                // 创建一个新的Local变量
+                const local = new Local(GLOBAL_THIS_NAME, UnknownType.getInstance());
+                const globalLocal = new Local(`%global_${this.constIdCounter++}`, UnknownType.getInstance());
+                // 创建赋值语句
+                const assignStmt = new ArkAssignStmt(globalLocal, local);
+                local.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+                
+                // 更新变量映射
+                globalVar.setArktsValue(globalLocal);
+                this.varLocalMap.set(globalVar.getName(), globalLocal);
+            }
+        }
+        else if(target === "napi_call_function"){
+            // 调用函数
+            const thisOperand = operands[1];
+            const thisLocal = this.getOrCreateValueForIrValue(thisOperand, currentBlock);
+            const funcOperand = operands[2];
+            const funcLocal = this.getOrCreateValueForIrValue(funcOperand, currentBlock);
+            const argslenOperand = operands[3];
+            const argsOperands = callInst.getArgsOperands();
+            const resultOperand = this.findReturnValueByIndex(callInst, "5");
+
+            if (!thisLocal || !funcLocal) {
+                this.logger.warn(`Failed to create Local for operands`);
+                return currentBlock;
+            }
+
+            // bind
+            const tmpLocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());
+
+            // 创建bind函数的方法签名
+            const fileSignature = new FileSignature("%unk", "%unk");
+            const classSignature = new ClassSignature("", fileSignature, null);
+            const methodSubSignature = new MethodSubSignature("bind", [], UnknownType.getInstance(), false);
+            const methodSignature = new MethodSignature(classSignature, methodSubSignature);
+
+            // 处理参数列表
+            const bindArgs = [thisLocal];
+            for (const argOperand of argsOperands) {
+                const argLocal = this.getOrCreateValueForIrValue(argOperand, currentBlock);
+                if (!argLocal) {
+                    this.logger.warn(`Failed to create Local for argument ${argOperand.getName()}`);
+                    continue;
+                }
+                bindArgs.push(argLocal);
+            }
+
+            // 创建bind函数调用表达式
+            const bindExpr = new ArkInstanceInvokeExpr(funcLocal as Local, methodSignature, bindArgs);
+            
+            // 创建赋值语句
+            const bindStmt = new ArkAssignStmt(tmpLocal, bindExpr);
+            tmpLocal.setDeclaringStmt(bindStmt);
+            currentBlock.addStmt(bindStmt);
+
+            // 获取funcLocal指向func的返回值类型
+            let funcParamIndex = this.paramIndexMap.get(funcLocal as Local);
+            if (funcParamIndex === undefined) {
+                return currentBlock;
+            }
+            // 在invokeExpr中，funcLocal是第funcParamIndex个参数
+            const invokeExprParam = this.arkinvokeExpr.getArg(funcParamIndex);
+            if(invokeExprParam.getType() instanceof FunctionType && resultOperand){
+                const funcType = invokeExprParam.getType() as FunctionType;
+                const returnType = funcType.getMethodSignature().getMethodSubSignature().getReturnType();
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, returnType);
+
+                // 创建函数调用，staticInvokeExpr
+                const callMethodSubSignature = new MethodSubSignature(tmpLocal.getName(), [], UnknownType.getInstance(), false);
+                const callMethodSignature = new MethodSignature(classSignature, callMethodSubSignature);
+
+                // 创建静态调用表达式
+                const callExpr = new ArkStaticInvokeExpr(callMethodSignature, bindArgs.slice(1));
+                // 创建赋值语句
+                const callStmt = new ArkAssignStmt(resultLocal, callExpr);
+                resultLocal.setDeclaringStmt(callStmt);
+                currentBlock.addStmt(callStmt);
+
+                // 更新resultLocal的值
+                resultOperand.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultOperand.getName(), resultLocal);
+            }
+            else{
+                // 创建函数调用，staticInvokeExpr
+                const callMethodSubSignature = new MethodSubSignature(tmpLocal.getName(), [], UnknownType.getInstance(), false);
+                const callMethodSignature = new MethodSignature(classSignature, callMethodSubSignature);
+
+                // 创建静态调用表达式
+                const callExpr = new ArkStaticInvokeExpr(callMethodSignature, bindArgs.slice(1));
+                const callStmt = new ArkInvokeStmt(callExpr);
+                currentBlock.addStmt(callStmt);
+            }
+        }
         return currentBlock;
     }
 
