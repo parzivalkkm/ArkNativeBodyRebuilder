@@ -7,9 +7,9 @@ import { ArkMethod } from '@ArkAnalyzer/src/core/model/ArkMethod';
 import { Local } from '@ArkAnalyzer/src/core/base/Local';
 import { Cfg } from '@ArkAnalyzer/src/core/graph/Cfg';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
-import { ArkAssignStmt, ArkInvokeStmt, ArkReturnStmt, ArkReturnVoidStmt } from '@ArkAnalyzer/src/core/base/Stmt';
+import { ArkAssignStmt, ArkInvokeStmt, ArkReturnStmt, ArkReturnVoidStmt, ArkThrowStmt } from '@ArkAnalyzer/src/core/base/Stmt';
 import { ArkArrayRef, ArkInstanceFieldRef, ArkParameterRef, ArkThisRef } from '@ArkAnalyzer/src/core/base/Ref';
-import { ArkInstanceInvokeExpr, ArkInstanceOfExpr, ArkNewArrayExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
+import { ArkInstanceInvokeExpr, ArkInstanceOfExpr, ArkNewArrayExpr, ArkNewExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { Constant, NullConstant, NumberConstant, StringConstant } from '@ArkAnalyzer/src/core/base/Constant';
 import { ValueUtil } from '@ArkAnalyzer/src/core/common/ValueUtil';
 import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType, ClassType, FunctionType } from '@ArkAnalyzer/src/core/base/Type';
@@ -1151,6 +1151,12 @@ export class CFGBuilder {
     private processErrorThrowCall(callInst: IRCallInstruction, currentBlock: BasicBlock): BasicBlock {
         // 处理错误抛出调用
         // 处理函数调用
+        const unkFileSignature = new FileSignature("%unk", "%unk");
+        const errorClassSignature = new ClassSignature("Error", unkFileSignature, null);
+        const errorType = new ClassType(errorClassSignature);
+        // TODO parameter数量是0？是否不正确？
+        const constructorSignature = new MethodSignature(errorClassSignature, new MethodSubSignature("constructor", [], errorType, false));
+
         const target = callInst.getTarget();
         const operands = callInst.getOperands();
         switch (target) {
@@ -1158,13 +1164,70 @@ export class CFGBuilder {
             case "napi_create_type_error":
             case "napi_create_range_error":
                 // 创建错误对象
-                // TODO
-            case "napi_throw":
+                // 分两个语句，一个是assign new，一个是instance invoke
             case "napi_throw_error":
             case "napi_throw_type_error":
             case "napi_throw_range_error":
                 // 抛出错误
                 // TODO
+                // 分三个语句，一个是assign new，一个是instance invoke，然后是ThrowStmt
+
+                const errCodeOperand = operands[1];
+                const errCodeValue = this.getOrCreateValueForIrValue(errCodeOperand, currentBlock);
+                if (!errCodeValue) {
+                    this.logger.warn(`Invalid error code operand for ${target}`);
+                    return currentBlock;
+                }
+                const messageOperand = operands[2];
+                const messageValue = this.getOrCreateValueForIrValue(messageOperand, currentBlock);
+                if (!messageValue) {
+                    this.logger.warn(`Invalid message operand for ${target}`);
+                    return currentBlock;
+                }
+                const errResOperand = this.findReturnValueByIndex(callInst, "3");
+                if (errResOperand) {
+                    // 创建错误对象的Local
+                    const errLocal = new Local(`%error_${this.constIdCounter++}`, UnknownType.getInstance());
+                    
+                    // 创建错误对象的实例化表达式
+                    const errorExpr = new ArkNewExpr(errorType);
+                    
+                    // 创建赋值语句
+                    const assignStmt = new ArkAssignStmt(errLocal, errorExpr);
+                    errLocal.setDeclaringStmt(assignStmt);
+                    currentBlock.addStmt(assignStmt);
+                    
+                    // 更新返回值
+                    errResOperand.setArktsValue(errLocal);
+                    this.varLocalMap.set(errResOperand.getName(), errLocal);
+
+                    // 然后创建实例方法调用
+                    const instanceInvokeExpr = new ArkInstanceInvokeExpr(errLocal, constructorSignature, [messageValue]);
+                    const invokeStmt = new ArkInvokeStmt(instanceInvokeExpr);
+                    currentBlock.addStmt(invokeStmt);
+
+                    if (target.startsWith("napi_throw")) {
+                        // 如果是抛出错误的调用，创建ThrowStmt
+                        const throwStmt = new ArkThrowStmt(errLocal);
+                        currentBlock.addStmt(throwStmt);
+                    }
+                }
+                break;
+            case "napi_throw":
+                // throw错误
+                const errOperand = operands[1];
+                if (!errOperand) {
+                    this.logger.warn(`Invalid error operand for ${target}`);
+                    return currentBlock;
+                }
+                const errValue = this.getOrCreateValueForIrValue(errOperand, currentBlock);
+                if (!errValue) {
+                    this.logger.warn(`Failed to create Local for error operand ${errOperand.getName()}`);
+                    return currentBlock;
+                }
+                const throwStmt = new ArkThrowStmt(errValue);
+                currentBlock.addStmt(throwStmt);
+                break;
         }
         return currentBlock;
     }
