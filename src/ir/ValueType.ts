@@ -13,4 +13,5 @@ export enum ValueType {
     Any = 'any',
     Undefined = 'undefined',
     Global = 'global',
+    Error = 'error',
 }

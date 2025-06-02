@@ -413,6 +413,56 @@ export const CallInstTypeRules: { [target: string]:{ [ruleType: string]: { [retV
             "-1": ValueType.String,
         },
     },
+    "napi_create_error":{
+        "operands": {
+            "1": ValueType.String, 
+            "2": ValueType.String, 
+        },
+        "rets": {
+            "3": ValueType.Error, 
+        },
+    },
+    "napi_create_type_error":{
+        "operands": {
+            "1": ValueType.String, 
+            "2": ValueType.String, 
+        },
+        "rets": {
+            "3": ValueType.Error, 
+        },
+    },
+    "napi_create_range_error":{
+        "operands": {
+            "1": ValueType.String, 
+            "2": ValueType.String, 
+        },
+        "rets": {
+            "3": ValueType.Error, 
+        },
+    },
+    "napi_throw":{
+        "operands": {
+            "1": ValueType.Error, 
+        },
+    },
+    "napi_throw_error":{
+        "operands": {
+            "1": ValueType.String,
+            "2": ValueType.String,
+        },
+    },
+    "napi_throw_type_error":{
+        "operands": {
+            "1": ValueType.String,
+            "2": ValueType.String,
+        },
+    },
+    "napi_throw_range_error":{
+        "operands": {
+            "1": ValueType.String,
+            "2": ValueType.String,
+        },
+    },
     
 
 
