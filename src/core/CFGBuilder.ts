@@ -218,6 +218,15 @@ export class CFGBuilder {
             case 'operator.new':
             case 'xmalloc':
                 return this.processAllocationCall(callInst, currentBlock);
+
+            case "napi_create_error":
+            case "napi_create_type_error":
+            case "napi_create_range_error":
+            case "napi_throw":
+            case "napi_throw_error":
+            case "napi_throw_type_error":
+            case "napi_throw_range_error":
+                return this.processErrorThrowCall(callInst, currentBlock);
                 
             case 'OH_LOG_Print':
                 return this.processLogPrintCall(callInst, currentBlock);
@@ -1137,6 +1146,27 @@ export class CFGBuilder {
         const methodSubSignature = new MethodSubSignature(apiName,params,VoidType.getInstance(),false);
         const targetMethodSig = new MethodSignature(classSignature, methodSubSignature);
         return targetMethodSig;
+    }
+
+    private processErrorThrowCall(callInst: IRCallInstruction, currentBlock: BasicBlock): BasicBlock {
+        // 处理错误抛出调用
+        // 处理函数调用
+        const target = callInst.getTarget();
+        const operands = callInst.getOperands();
+        switch (target) {
+            case "napi_create_error":
+            case "napi_create_type_error":
+            case "napi_create_range_error":
+                // 创建错误对象
+                // TODO
+            case "napi_throw":
+            case "napi_throw_error":
+            case "napi_throw_type_error":
+            case "napi_throw_range_error":
+                // 抛出错误
+                // TODO
+        }
+        return currentBlock;
     }
         
     
