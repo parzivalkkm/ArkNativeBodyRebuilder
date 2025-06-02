@@ -886,7 +886,40 @@ export class CFGBuilder {
             }
         }
         else if (target === 'napi_get_property_names') {
-            // 获取对象所有可枚举的属性名，好像没有必要实现
+            const objectOperand = operands[1];
+            const resultOperand = this.findReturnValueByIndex(callInst, "2");
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            if (!objectValue) {
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+            if (resultOperand) {
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, UnknownType.getInstance());
+                // 创建方法签名
+                const fileSignature = new FileSignature("ES2015", "BuiltinClass");
+                const classSignature = new ClassSignature("Object", fileSignature, null);
+                const methodSubSignature = new MethodSubSignature(
+                    "keys",
+                    [],  // 无参数
+                    UnknownType.getInstance(),  // 返回类型
+                    false  // 非静态方法
+                );
+                const methodSignature = new MethodSignature(classSignature, methodSubSignature);
+
+                // 创建静态调用表达式
+                const staticInvokeExpr = new ArkStaticInvokeExpr(
+                    methodSignature,
+                    [objectValue]  
+                );
+
+                // 创建赋值语句
+                const assignStmt = new ArkAssignStmt(resultLocal, staticInvokeExpr);
+                resultLocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+                
+                resultOperand.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultOperand.getName(), resultLocal);
+            }
 
         }
         else if (target === 'napi_set_property') {
