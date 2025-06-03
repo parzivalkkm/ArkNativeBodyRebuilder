@@ -159,7 +159,7 @@ export class FunctionBodyRebuilder {
      */
     private buildFunctionCFG(): void {
         // 创建CFG构建器
-        const cfgBuilder = new CFGBuilder(this.irFunction, this.functionMethod, this.logger);
+        const cfgBuilder = new CFGBuilder(this.irFunction, this.functionMethod, this.logger, this.callsiteInvokeExpr);
         
         // 构建CFG
         const cfg = cfgBuilder.buildCFG();

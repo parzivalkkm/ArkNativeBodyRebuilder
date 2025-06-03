@@ -9,7 +9,7 @@ import { Cfg } from '@ArkAnalyzer/src/core/graph/Cfg';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
 import { ArkAssignStmt, ArkInvokeStmt, ArkReturnStmt, ArkReturnVoidStmt, ArkThrowStmt } from '@ArkAnalyzer/src/core/base/Stmt';
 import { ArkArrayRef, ArkInstanceFieldRef, ArkParameterRef, ArkThisRef } from '@ArkAnalyzer/src/core/base/Ref';
-import { ArkInstanceInvokeExpr, ArkInstanceOfExpr, ArkNewArrayExpr, ArkNewExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
+import { ArkDeleteExpr, ArkInstanceInvokeExpr, ArkInstanceOfExpr, ArkNewArrayExpr, ArkNewExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { Constant, NullConstant, NumberConstant, StringConstant } from '@ArkAnalyzer/src/core/base/Constant';
 import { ValueUtil } from '@ArkAnalyzer/src/core/common/ValueUtil';
 import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType, ClassType, FunctionType } from '@ArkAnalyzer/src/core/base/Type';
@@ -25,6 +25,7 @@ export class CFGBuilder {
     private logger: Logger;
     private irFunction: IRFunction;
     private arkMethod: ArkMethod;
+        private callsiteInvokeExpr: ArkInstanceInvokeExpr;
     
     // 存储变量到Local的映射
     private varLocalMap: Map<string, Local> = new Map();
@@ -32,10 +33,11 @@ export class CFGBuilder {
     private paramIndexMap: Map<Local, number> = new Map();
     private constIdCounter: number = 0;
     
-    constructor(irFunction: IRFunction, arkMethod: ArkMethod, logger: Logger) {
+    constructor(irFunction: IRFunction, arkMethod: ArkMethod, logger: Logger, invokeExpr: ArkInstanceInvokeExpr) {
         this.irFunction = irFunction;
         this.arkMethod = arkMethod;
         this.logger = logger;
+        this.callsiteInvokeExpr = invokeExpr;
     }
     
     /**
