@@ -25,7 +25,7 @@ scene.buildScene4HarmonyProject();
 
 scene.inferTypes()
 
-const irFilePath = "tests/resources/test_resources/native_complex/libentry.so.ir.json"; // 生成的IR文件路径
+const irFilePath = "tests/resources/test_resources/native_clean/libentry.so.ir.json"; // 生成的IR文件路径
 
 // 创建NativeBodyRebuilder实例
 const nativeBodyRebuilder = new NativeBodyRebuilder(irFilePath, scene);

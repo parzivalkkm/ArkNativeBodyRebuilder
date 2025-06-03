@@ -797,29 +797,136 @@ export class CFGBuilder {
         const target = callInst.getTarget();
         const operands = callInst.getOperands();
         if (target === 'napi_get_prototype') {
-            // 在DevEco Studio 4.1及以后的版本中，由于ArkTS没有原型的概念，
-            // 因此尝试进行原型赋值或相关操作时，将会触发错误提示
-            // 'Prototype assignment is not supported (arkts-no-prototype-assignment)'
-            // 好像没有必要进行处理
+            const objectOperand = operands[1];
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            if(!objectValue){
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+            // 找到objectValue在参数的index
+            const paramIndex = this.paramIndexMap.get(objectValue as Local);
+            
+            if(paramIndex === undefined){
+                this.logger.warn(`Failed to find param index for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+            const resultVar = this.findReturnValueByIndex(callInst, "1");
+            if(resultVar){
+                const tmplocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());
+                // 创建一个ArkInstanceFieldRef，base为objectValue，field在函数参数中获取
+                const filedtype = this.arkMethod.getSignature().getMethodSubSignature().getParameters()[paramIndex].getType();
+                const fileddeclaringSignature = (filedtype as ClassType).getClassSignature();
+                const fieldSignature = new FieldSignature("constructor", fileddeclaringSignature, filedtype, false);
+                const fieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
+                const assignStmt = new ArkAssignStmt(tmplocal, fieldRef);
+                currentBlock.addStmt(assignStmt);
+                tmplocal.setDeclaringStmt(assignStmt);
+                
+                // 创建一个ArkAssignStmt，将tmplocal赋值给resultVar
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, UnknownType.getInstance());
+                const defaultClassSignature = ClassSignature.DEFAULT;
+                const prototypefieldSignature = new FieldSignature("prototype", defaultClassSignature, UnknownType.getInstance(), false);
+                const fieldRef2 = new ArkInstanceFieldRef(tmplocal, prototypefieldSignature);
+                const assignStmt2 = new ArkAssignStmt(resultLocal, fieldRef2);
+                currentBlock.addStmt(assignStmt2);
+                resultLocal.setDeclaringStmt(assignStmt2);
+                
+                resultVar.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultVar.getName(), resultLocal);
+                
+            }
 
         }
         else if (target === 'napi_create_object') {
             // arkts不允许创建默认对象
             // Object literal must correspond to some explicitly declared class or interface (arkts-no-untyped-obj-literals)
             // 但是还是弄一下吧
-            // const resultVar = this.findReturnValueByIndex(callInst, "1");
-            // if (resultVar) {
-            //     const local = 
-            //     const assignStmt = new ArkAssignStmt(local, ValueUtil.getUndefinedConst());
-            //     currentBlock.addStmt(assignStmt);
+            const resultVar = this.findReturnValueByIndex(callInst, "1");
+            if (resultVar) {
+                // 创建 ES2015 Object 类型的签名
+                const fileSignature = new FileSignature("ES2015", "BuiltinClass");
+                const classSignature = new ClassSignature("Object", fileSignature, null);
+                const objectType = new ClassType(classSignature, undefined);
                 
-            //     resultVar.setArktsValue(local);
-            //     this.varLocalMap.set(resultVar.getName(), local);
-            // }
+                const tmplocal = new Local(`%tmp_${this.constIdCounter++}`, objectType);
+                
+                // 创建新对象实例表达式
+                const newExpr = new ArkNewExpr(objectType);
+                
+                const assignStmt = new ArkAssignStmt(tmplocal, newExpr);
+                tmplocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+                
+                resultVar.setArktsValue(tmplocal);
+                this.varLocalMap.set(resultVar.getName(), tmplocal);
 
+                // 创建invokeExpr
+                // 创建方法签名
+                const methodSubSignature = new MethodSubSignature(
+                    "constructor",  
+                    [],  
+                    objectType,  
+                    false  
+                );
+                const methodSignature = new MethodSignature(classSignature, methodSubSignature);
+                
+                // 创建实例调用表达式
+                const constructorInvokeExpr = new ArkInstanceInvokeExpr(
+                    tmplocal,  
+                    methodSignature,  
+                    [] 
+                );
+                
+                // 创建调用语句
+                const invokeStmt = new ArkInvokeStmt(constructorInvokeExpr);
+                currentBlock.addStmt(invokeStmt);
+
+                // 给resultVar创建对应local
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, objectType);
+                // 赋值tmplocal给resultLocal
+                const assignStmt2 = new ArkAssignStmt(resultLocal, tmplocal);
+                currentBlock.addStmt(assignStmt2);
+                resultLocal.setDeclaringStmt(assignStmt2);
+
+                resultVar.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultVar.getName(), resultLocal);
+            }
         }
         else if (target === 'napi_get_property_names') {
-            // 获取对象所有可枚举的属性名，好像没有必要实现
+            const objectOperand = operands[1];
+            const resultOperand = this.findReturnValueByIndex(callInst, "2");
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            if (!objectValue) {
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+            if (resultOperand) {
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, UnknownType.getInstance());
+                // 创建方法签名
+                const fileSignature = new FileSignature("ES2015", "BuiltinClass");
+                const classSignature = new ClassSignature("Object", fileSignature, null);
+                const methodSubSignature = new MethodSubSignature(
+                    "keys",
+                    [],  // 无参数
+                    UnknownType.getInstance(),  // 返回类型
+                    false  // 非静态方法
+                );
+                const methodSignature = new MethodSignature(classSignature, methodSubSignature);
+
+                // 创建静态调用表达式
+                const staticInvokeExpr = new ArkStaticInvokeExpr(
+                    methodSignature,
+                    [objectValue]  
+                );
+
+                // 创建赋值语句
+                const assignStmt = new ArkAssignStmt(resultLocal, staticInvokeExpr);
+                resultLocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+                
+                resultOperand.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultOperand.getName(), resultLocal);
+            }
 
         }
         else if (target === 'napi_set_property') {
@@ -841,28 +948,196 @@ export class CFGBuilder {
                 this.logger.warn(`Failed to create Local for operand ${valueOperand.getName()}`);
                 return currentBlock;
             }
-            // // 创建对象属性引用
-            // if (objectValue instanceof Local) {
-            //     const objectRef = new ArkInstanceFieldRef(objectValue, propertyValue as Local);
-            //     // 创建赋值语句
-            //     const assignStmt = new ArkAssignStmt(objectRef, valueValue);
-            //     currentBlock.addStmt(assignStmt);
-            // }
-            // // 构建对应的field signature FieldSignature
-            // FieldSignature
-            
-            // const objectRef = new ArkInstanceFieldRef(objectValue as Local, propertyValue as Local);
+            // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (propertyValue instanceof StringConstant) {
+                // 如果propertyValue是字符串常量，直接使用它的值
+                fieldName = propertyValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(propertyValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${propertyOperand.getName()}`);
+                return currentBlock;
+            }
+            // 创建一个fieldSignature
+            const fieldSignature = new FieldSignature(fieldName, ClassSignature.DEFAULT, UnknownType.getInstance(), false);
+            // InstanceFieldRef
+            const instanceFieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
+            // AssignStmt
+            const assignStmt = new ArkAssignStmt(instanceFieldRef, valueValue);
+            currentBlock.addStmt(assignStmt);
 
         }
         else if (target === 'napi_get_property') {
-
+            const objectOperand = operands[1];
+            const keyOperand = operands[2];
+            const resultOperand = this.findReturnValueByIndex(callInst, "3");
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            const keyValue = this.getOrCreateValueForIrValue(keyOperand, currentBlock);
+            if (!objectValue) {
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+            if (!keyValue) {
+                this.logger.warn(`Failed to create Local for operand ${keyOperand.getName()}`);
+                return currentBlock;
+            }
+            if (resultOperand) {
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, AnyType.getInstance());
+                 // 尝试获取字段名称
+                let fieldName: string | null = null;
+                if (keyValue instanceof StringConstant) {
+                    // 如果keyValue是字符串常量，直接使用它的值
+                    fieldName = keyValue.getValue();
+                }
+                else{
+                    fieldName = this.traceStringLiteralValueInBlock(keyValue, currentBlock);
+                }
+                if (!fieldName) {
+                    this.logger.warn(`Failed to trace string literal value for operand ${keyOperand.getName()}`);
+                    return currentBlock;
+                }
+                // 创建字段签名
+                const fieldSignature = new FieldSignature(
+                    fieldName,
+                    ClassSignature.DEFAULT,  // 声明该字段的类签名
+                    UnknownType.getInstance(),  // 字段类型
+                    false  // 非静态字段
+                );
+                
+                // 创建字段引用
+                const fieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
+                
+                // 创建赋值语句
+                const assignStmt = new ArkAssignStmt(resultLocal, fieldRef);
+                resultLocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+                
+                // 更新变量映射
+                resultOperand.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultOperand.getName(), resultLocal);
+            }
         }
         else if (target === 'napi_has_property') {
+            const objectOperand = operands[1];
+            const keyOperand = operands[2];
+            const resultOperand = this.findReturnValueByIndex(callInst, "3");
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            const keyValue = this.getOrCreateValueForIrValue(keyOperand, currentBlock);
+            if (!objectValue) {
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+            if (!keyValue) {
+                this.logger.warn(`Failed to create Local for operand ${keyOperand.getName()}`);
+                return currentBlock;
+            }
+            if (resultOperand) {
+                const tmplocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());
+                
+                // 创建方法签名
+                const fileSignature = new FileSignature("ES2015", "BuiltinClass");
+                const classSignature = new ClassSignature("Object", fileSignature, null);
+                const methodSubSignature = new MethodSubSignature(
+                    "keys",
+                    [],  // 无参数
+                    UnknownType.getInstance(),  // 返回类型
+                    false  // 非静态方法
+                );
+                const methodSignature = new MethodSignature(classSignature, methodSubSignature);
 
+                // 创建静态调用表达式
+                const staticInvokeExpr = new ArkStaticInvokeExpr(
+                    methodSignature,
+                    [objectValue]  
+                );
+
+                // 创建赋值语句
+                const assignStmt = new ArkAssignStmt(tmplocal, staticInvokeExpr);
+                tmplocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+
+                // 创建结果变量
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, BooleanType.getInstance());
+                const includesMethodSubSignature = new MethodSubSignature(
+                    "includes",
+                    [],  // 参数列表为空
+                    BooleanType.getInstance(),  // 返回布尔类型
+                    false  // 非静态方法
+                );
+                const includesMethodSignature = new MethodSignature(ClassSignature.DEFAULT, includesMethodSubSignature);
+
+                // 创建实例调用表达式
+                const includesInvokeExpr = new ArkInstanceInvokeExpr(
+                    tmplocal,  // base是刚创建的tmplocal
+                    includesMethodSignature,  // 方法签名
+                    [keyValue]  // 参数是keyValue
+                );
+
+                // 创建赋值语句
+                const assignStmt2 = new ArkAssignStmt(resultLocal, includesInvokeExpr);
+                resultLocal.setDeclaringStmt(assignStmt2);
+                currentBlock.addStmt(assignStmt2);
+
+                // 更新变量映射
+                resultOperand.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultOperand.getName(), resultLocal);
+            }
         }
         else if (target === 'napi_delete_property') {
-            // 好像可以用ArkDeleteExpr来实现
-
+            
+            const objectOperand = operands[1];  // 获取对象操作数
+            const keyOperand = operands[2];     // 获取键操作数
+            
+            // 获取对象和键的值
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            const keyValue = this.getOrCreateValueForIrValue(keyOperand, currentBlock);
+            
+            if (!objectValue || !keyValue) {
+                this.logger.warn(`Failed to create Local for operands in napi_delete_property`);
+                return currentBlock;
+            }
+             // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (keyValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = keyValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(keyValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${keyOperand.getName()}`);
+                return currentBlock;
+            }
+            // 创建字段签名
+            const fieldSignature = new FieldSignature(
+                fieldName,  // 使用键值作为字段名
+                ClassSignature.DEFAULT,         // 使用默认类签名
+                UnknownType.getInstance(),      // 字段类型未知
+                false                          // 非静态字段
+            );
+            
+            // 创建字段引用
+            const fieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
+            
+            // 创建删除表达式
+            const deleteExpr = new ArkDeleteExpr(fieldRef);
+            
+            // 创建一个临时变量来存储删除操作的结果（布尔值）
+            const resultVar = this.findReturnValueByIndex(callInst, "3");
+            if (resultVar) {
+                const resultLocal = new Local(`%delete_result_${this.constIdCounter++}`, BooleanType.getInstance());
+                const assignStmt = new ArkAssignStmt(resultLocal, deleteExpr);
+                resultLocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+                
+                // 更新变量映射
+                resultVar.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultVar.getName(), resultLocal);
+            }
         }
         else if (target === 'napi_has_own_property') {
             // 用于检查传入的Object是否具有自己的命名属性，不包括从原型链上继承的属性。
@@ -871,13 +1146,193 @@ export class CFGBuilder {
         }
         else if (target === 'napi_set_named_property') {
             // 和napi_set_property类似，只不过key是一个cpp字符串
+            const objectOperand = operands[1];  // 获取对象操作数
+            const propertyNameOperand = operands[2];  // 获取属性名操作数(IRStringConstant)
+            const valueOperand = operands[3];    // 获取值操作数
 
+            // 获取对应的 Value
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            if (!objectValue) {
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+
+            const propertyNameValue = this.getOrCreateValueForIrValue(propertyNameOperand, currentBlock);
+            if (!propertyNameValue) {
+                this.logger.warn(`Failed to create Local for operand ${propertyNameOperand.getName()}`);
+                return currentBlock;
+            }
+
+            const valueValue = this.getOrCreateValueForIrValue(valueOperand, currentBlock);
+            if (!valueValue) {
+                this.logger.warn(`Failed to create Local for operand ${valueOperand.getName()}`);
+                return currentBlock;
+            }
+
+             // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (propertyNameValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = propertyNameValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(propertyNameValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${propertyNameOperand.getName()}`);
+                return currentBlock;
+            }
+
+            // 创建一个 fieldSignature，直接使用字符串常量的值作为字段名
+            const fieldSignature = new FieldSignature(
+                fieldName,  
+                ClassSignature.DEFAULT, 
+                UnknownType.getInstance(),  
+                false  
+            );
+            // 创建实例字段引用
+            const instanceFieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
+            // 创建赋值语句
+            const assignStmt = new ArkAssignStmt(instanceFieldRef, valueValue);
+            currentBlock.addStmt(assignStmt);
         }
         else if (target === 'napi_get_named_property') {
+            const objectOperand = operands[1];
+            const propertyNameOperand = operands[2];  // IRStringConstant类型
+            const resultOperand = this.findReturnValueByIndex(callInst, "3");
+            
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            if (!objectValue) {
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
 
+            const propertyNameValue = this.getOrCreateValueForIrValue(propertyNameOperand, currentBlock);
+            if (!propertyNameValue) {
+                this.logger.warn(`Failed to create Local for operand ${propertyNameOperand.getName()}`);
+                return currentBlock;
+            }
+
+                         // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (propertyNameValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = propertyNameValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(propertyNameValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${propertyNameOperand.getName()}`);
+                return currentBlock;
+            }
+
+            if (resultOperand) {
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, AnyType.getInstance());
+                
+                // 创建字段签名
+                const fieldSignature = new FieldSignature(
+                    fieldName,  // 直接使用字符串值作为字段名
+                    ClassSignature.DEFAULT,  // 声明该字段的类签名
+                    UnknownType.getInstance(),  // 字段类型
+                    false  // 非静态字段
+                );
+                
+                // 创建字段引用
+                const fieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
+                
+                // 创建赋值语句
+                const assignStmt = new ArkAssignStmt(resultLocal, fieldRef);
+                resultLocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+                
+                // 更新变量映射
+                resultOperand.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultOperand.getName(), resultLocal);
+            }
         }
         else if (target === 'napi_has_named_property') {
+            const objectOperand = operands[1];
+            const keyOperand = operands[2];
+            const resultOperand = this.findReturnValueByIndex(callInst, "3");
+            const objectValue = this.getOrCreateValueForIrValue(objectOperand, currentBlock);
+            if (!objectValue) {
+                this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
+                return currentBlock;
+            }
+            
+            const keyValue = this.getOrCreateValueForIrValue(keyOperand, currentBlock);
+            if (!keyValue) {
+                this.logger.warn(`Failed to create Local for operand ${keyOperand.getName()}`);
+                return currentBlock;
+            }
 
+            // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (keyValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = keyValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(keyValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${keyOperand.getName()}`);
+                return currentBlock;
+            }
+
+            if (resultOperand) {
+                const tmplocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());
+                
+                // 创建方法签名
+                const fileSignature = new FileSignature("ES2015", "BuiltinClass");
+                const classSignature = new ClassSignature("Object", fileSignature, null);
+                const methodSubSignature = new MethodSubSignature(
+                    "keys",
+                    [],  // 无参数
+                    UnknownType.getInstance(),  // 返回类型
+                    false  // 非静态方法
+                );
+                const methodSignature = new MethodSignature(classSignature, methodSubSignature);
+
+                // 创建静态调用表达式
+                const staticInvokeExpr = new ArkStaticInvokeExpr(
+                    methodSignature,
+                    [objectValue]  
+                );
+
+                // 创建赋值语句
+                const assignStmt = new ArkAssignStmt(tmplocal, staticInvokeExpr);
+                tmplocal.setDeclaringStmt(assignStmt);
+                currentBlock.addStmt(assignStmt);
+
+                // 创建结果变量
+                const resultLocal = new Local(`%result_${this.constIdCounter++}`, BooleanType.getInstance());
+                const includesMethodSubSignature = new MethodSubSignature(
+                    "includes",
+                    [],  // 参数列表为空
+                    BooleanType.getInstance(),  // 返回布尔类型
+                    false  // 非静态方法
+                );
+                const includesMethodSignature = new MethodSignature(ClassSignature.DEFAULT, includesMethodSubSignature);
+                // 创建字符串常量
+                const keyStringConstant = ValueUtil.createStringConst(fieldName);
+                // 创建实例调用表达式
+                const includesInvokeExpr = new ArkInstanceInvokeExpr(
+                    tmplocal,  // base是刚创建的tmplocal
+                    includesMethodSignature,  // 方法签名
+                    [keyStringConstant]  // 参数是keyValue
+                );
+
+                // 创建赋值语句
+                const assignStmt2 = new ArkAssignStmt(resultLocal, includesInvokeExpr);
+                resultLocal.setDeclaringStmt(assignStmt2);
+                currentBlock.addStmt(assignStmt2);
+
+                // 更新变量映射
+                resultOperand.setArktsValue(resultLocal);
+                this.varLocalMap.set(resultOperand.getName(), resultLocal);
+            }
         }
         else if (target === 'napi_get_all_property_names') {
 
@@ -888,22 +1343,6 @@ export class CFGBuilder {
         return currentBlock;
     }
 
-    // private createDefaultObject(): Local {
-    //     // 运用ArkNewExpr创建一个新对象
-
-    //     // TODO: 改成统一的创建方式
-    //     // const sdkProject = 'NodeAPI'
-    //     // const apiFile = 'NodeAPI/@default.d.ts';
-    //     // const apiNS = 'defaultObject';
-    //     // const apiCls = '%dflt';
-    //     // const fileSignature = new FileSignature(sdkProject,apiFile);
-    //     // const namespaceSignature = new NamespaceSignature(apiNS, fileSignature);
-    //     // const classSignature = new ClassSignature(apiCls, fileSignature, namespaceSignature);
-        
-    //     // const local = new Local(`%object_${this.constIdCounter++}`, StringType.getInstance());
-    //     // return local;
-        
-    // }
 
     /**
      * 处理函数调用
@@ -945,7 +1384,6 @@ export class CFGBuilder {
                 return currentBlock;
             }
 
-            // bind
             const tmpLocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());
 
             // 创建bind函数的方法签名
@@ -1380,6 +1818,91 @@ export class CFGBuilder {
                 this.logger.warn(`Unsupported value type: ${valueType}, using Object type`);
                 return StringType.getInstance(); // 临时使用String类型作为默认
         }
+    }
+
+    private traceStringLiteralValueInBlock(value: Value, currentBlock: BasicBlock, visited: Set<Local> = new Set()): string | null {
+        if (!(value instanceof Local)) {
+            if (value instanceof StringConstant) {
+                return value.getValue();
+            }
+            return null;
+        }
+        const local = value as Local;
+        // 防止循环引用
+        if (visited.has(local)) {
+            return null;
+        }
+        visited.add(local);
+        
+        // 检查Local的类型是否为字符串
+        if (!(local.getType() instanceof StringType)) {
+            return null;
+        }
+        
+        // 遍历当前基本块中的所有语句，找到对该Local的最新赋值
+        const statements = currentBlock.getStmts();
+        let latestAssignStmt: ArkAssignStmt | null = null;
+        
+        // 从后往前遍历，找到最新的赋值语句
+        for (let i = statements.length - 1; i >= 0; i--) {
+            const stmt = statements[i];
+            if (stmt instanceof ArkAssignStmt && stmt.getLeftOp() === local) {
+                latestAssignStmt = stmt;
+                break;
+            }
+        }
+        
+        // 如果在当前block中没找到赋值，检查declaringStmt（用于处理参数初始化等情况）
+        if (!latestAssignStmt) {
+            const declaringStmt = local.getDeclaringStmt();
+            if (declaringStmt && declaringStmt instanceof ArkAssignStmt) {
+                latestAssignStmt = declaringStmt;
+            }
+        }
+        
+        if (!latestAssignStmt) {
+            return null;
+        }
+        
+        const rightOp = latestAssignStmt.getRightOp();
+        
+        // 情况1: 直接赋值字符串常量
+        if (rightOp instanceof StringConstant) {
+            return rightOp.getValue();
+        }
+        
+        // 情况2: 从另一个Local赋值（递归追踪）
+        if (rightOp instanceof Local) {
+            return this.traceStringLiteralValueInBlock(rightOp, currentBlock, visited);
+        }
+        
+        // 情况3: 从参数引用赋值
+        if (rightOp instanceof ArkParameterRef) {
+            const paramIndex = rightOp.getIndex();
+            
+            // 从调用点表达式中获取对应参数的值
+            const args = this.callsiteInvokeExpr.getArgs();
+            if (paramIndex >= 0 && paramIndex < args.length) {
+                const argValue = args[paramIndex];
+                
+                // 如果参数是字符串常量，返回其值
+                if (argValue instanceof StringConstant) {
+                    return argValue.getValue();
+                }
+                
+                // 如果参数是Local，递归追踪（需要在调用点的上下文中追踪）
+                // 注意：这里可能需要访问调用点所在的BasicBlock，但目前我们只有当前BasicBlock
+                // 所以暂时只处理常量情况
+                this.logger.debug(`Parameter at index ${paramIndex} is not a string constant, trace failed`);
+            } else {
+                this.logger.warn(`Parameter index ${paramIndex} out of bounds for callsite arguments`);
+            }
+            
+            return null;
+        }
+    
+        // 其他情况无法追溯
+        return null;
     }
 
     /**
