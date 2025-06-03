@@ -941,8 +941,21 @@ export class CFGBuilder {
                 this.logger.warn(`Failed to create Local for operand ${valueOperand.getName()}`);
                 return currentBlock;
             }
+            // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (propertyValue instanceof StringConstant) {
+                // 如果propertyValue是字符串常量，直接使用它的值
+                fieldName = propertyValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(propertyValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${propertyOperand.getName()}`);
+                return currentBlock;
+            }
             // 创建一个fieldSignature
-            const fieldSignature = new FieldSignature((propertyValue as Local).getName(), ClassSignature.DEFAULT, UnknownType.getInstance(), false);
+            const fieldSignature = new FieldSignature(fieldName, ClassSignature.DEFAULT, UnknownType.getInstance(), false);
             // InstanceFieldRef
             const instanceFieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
             // AssignStmt
@@ -966,10 +979,22 @@ export class CFGBuilder {
             }
             if (resultOperand) {
                 const resultLocal = new Local(`%result_${this.constIdCounter++}`, AnyType.getInstance());
-                
+                 // 尝试获取字段名称
+                let fieldName: string | null = null;
+                if (keyValue instanceof StringConstant) {
+                    // 如果keyValue是字符串常量，直接使用它的值
+                    fieldName = keyValue.getValue();
+                }
+                else{
+                    fieldName = this.traceStringLiteralValueInBlock(keyValue, currentBlock);
+                }
+                if (!fieldName) {
+                    this.logger.warn(`Failed to trace string literal value for operand ${keyOperand.getName()}`);
+                    return currentBlock;
+                }
                 // 创建字段签名
                 const fieldSignature = new FieldSignature(
-                    (keyValue as Local).getName(),
+                    fieldName,
                     ClassSignature.DEFAULT,  // 声明该字段的类签名
                     UnknownType.getInstance(),  // 字段类型
                     false  // 非静态字段
@@ -1067,10 +1092,22 @@ export class CFGBuilder {
                 this.logger.warn(`Failed to create Local for operands in napi_delete_property`);
                 return currentBlock;
             }
-            
+             // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (keyValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = keyValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(keyValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${keyOperand.getName()}`);
+                return currentBlock;
+            }
             // 创建字段签名
             const fieldSignature = new FieldSignature(
-                (keyValue as Local).getName(),  // 使用键值作为字段名
+                fieldName,  // 使用键值作为字段名
                 ClassSignature.DEFAULT,         // 使用默认类签名
                 UnknownType.getInstance(),      // 字段类型未知
                 false                          // 非静态字段
@@ -1113,12 +1150,9 @@ export class CFGBuilder {
                 return currentBlock;
             }
 
-            // 获取属性名字符串
-            let propertyName = "";
-            if (propertyNameOperand instanceof IRStringConstant) {
-                propertyName = propertyNameOperand.getValue();
-            } else {
-                this.logger.warn(`Property name operand is not a string constant`);
+            const propertyNameValue = this.getOrCreateValueForIrValue(propertyNameOperand, currentBlock);
+            if (!propertyNameValue) {
+                this.logger.warn(`Failed to create Local for operand ${propertyNameOperand.getName()}`);
                 return currentBlock;
             }
 
@@ -1128,9 +1162,23 @@ export class CFGBuilder {
                 return currentBlock;
             }
 
+             // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (propertyNameValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = propertyNameValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(propertyNameValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${propertyNameOperand.getName()}`);
+                return currentBlock;
+            }
+
             // 创建一个 fieldSignature，直接使用字符串常量的值作为字段名
             const fieldSignature = new FieldSignature(
-                propertyName,  
+                fieldName,  
                 ClassSignature.DEFAULT, 
                 UnknownType.getInstance(),  
                 false  
@@ -1152,12 +1200,23 @@ export class CFGBuilder {
                 return currentBlock;
             }
 
-            // 获取属性名字符串
-            let propertyName = "";
-            if (propertyNameOperand instanceof IRStringConstant) {
-                propertyName = propertyNameOperand.getValue();
-            } else {
-                this.logger.warn(`Property name operand is not a string constant`);
+            const propertyNameValue = this.getOrCreateValueForIrValue(propertyNameOperand, currentBlock);
+            if (!propertyNameValue) {
+                this.logger.warn(`Failed to create Local for operand ${propertyNameOperand.getName()}`);
+                return currentBlock;
+            }
+
+                         // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (propertyNameValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = propertyNameValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(propertyNameValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${propertyNameOperand.getName()}`);
                 return currentBlock;
             }
 
@@ -1166,7 +1225,7 @@ export class CFGBuilder {
                 
                 // 创建字段签名
                 const fieldSignature = new FieldSignature(
-                    propertyName,  // 直接使用字符串值作为字段名
+                    fieldName,  // 直接使用字符串值作为字段名
                     ClassSignature.DEFAULT,  // 声明该字段的类签名
                     UnknownType.getInstance(),  // 字段类型
                     false  // 非静态字段
@@ -1194,13 +1253,27 @@ export class CFGBuilder {
                 this.logger.warn(`Failed to create Local for operand ${objectOperand.getName()}`);
                 return currentBlock;
             }
-            let keyName = "";
-            if (keyOperand instanceof IRStringConstant) {
-                keyName = keyOperand.getValue();
-            } else {
-                this.logger.warn(`Property name operand is not a string constant`);
+            
+            const keyValue = this.getOrCreateValueForIrValue(keyOperand, currentBlock);
+            if (!keyValue) {
+                this.logger.warn(`Failed to create Local for operand ${keyOperand.getName()}`);
                 return currentBlock;
             }
+
+            // 尝试获取字段名称
+            let fieldName: string | null = null;
+            if (keyValue instanceof StringConstant) {
+                // 如果keyValue是字符串常量，直接使用它的值
+                fieldName = keyValue.getValue();
+            }
+            else{
+                fieldName = this.traceStringLiteralValueInBlock(keyValue, currentBlock);
+            }
+            if (!fieldName) {
+                this.logger.warn(`Failed to trace string literal value for operand ${keyOperand.getName()}`);
+                return currentBlock;
+            }
+
             if (resultOperand) {
                 const tmplocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());
                 
@@ -1236,7 +1309,7 @@ export class CFGBuilder {
                 );
                 const includesMethodSignature = new MethodSignature(ClassSignature.DEFAULT, includesMethodSubSignature);
                 // 创建字符串常量
-                const keyStringConstant = ValueUtil.createStringConst(keyName);
+                const keyStringConstant = ValueUtil.createStringConst(fieldName);
                 // 创建实例调用表达式
                 const includesInvokeExpr = new ArkInstanceInvokeExpr(
                     tmplocal,  // base是刚创建的tmplocal
@@ -1263,22 +1336,6 @@ export class CFGBuilder {
         return currentBlock;
     }
 
-    // private createDefaultObject(): Local {
-    //     // 运用ArkNewExpr创建一个新对象
-
-    //     // TODO: 改成统一的创建方式
-    //     // const sdkProject = 'NodeAPI'
-    //     // const apiFile = 'NodeAPI/@default.d.ts';
-    //     // const apiNS = 'defaultObject';
-    //     // const apiCls = '%dflt';
-    //     // const fileSignature = new FileSignature(sdkProject,apiFile);
-    //     // const namespaceSignature = new NamespaceSignature(apiNS, fileSignature);
-    //     // const classSignature = new ClassSignature(apiCls, fileSignature, namespaceSignature);
-        
-    //     // const local = new Local(`%object_${this.constIdCounter++}`, StringType.getInstance());
-    //     // return local;
-        
-    // }
 
     /**
      * 处理函数调用
@@ -1662,6 +1719,91 @@ export class CFGBuilder {
                 this.logger.warn(`Unsupported value type: ${valueType}, using Object type`);
                 return StringType.getInstance(); // 临时使用String类型作为默认
         }
+    }
+
+    private traceStringLiteralValueInBlock(value: Value, currentBlock: BasicBlock, visited: Set<Local> = new Set()): string | null {
+        if (!(value instanceof Local)) {
+            if (value instanceof StringConstant) {
+                return value.getValue();
+            }
+            return null;
+        }
+        const local = value as Local;
+        // 防止循环引用
+        if (visited.has(local)) {
+            return null;
+        }
+        visited.add(local);
+        
+        // 检查Local的类型是否为字符串
+        if (!(local.getType() instanceof StringType)) {
+            return null;
+        }
+        
+        // 遍历当前基本块中的所有语句，找到对该Local的最新赋值
+        const statements = currentBlock.getStmts();
+        let latestAssignStmt: ArkAssignStmt | null = null;
+        
+        // 从后往前遍历，找到最新的赋值语句
+        for (let i = statements.length - 1; i >= 0; i--) {
+            const stmt = statements[i];
+            if (stmt instanceof ArkAssignStmt && stmt.getLeftOp() === local) {
+                latestAssignStmt = stmt;
+                break;
+            }
+        }
+        
+        // 如果在当前block中没找到赋值，检查declaringStmt（用于处理参数初始化等情况）
+        if (!latestAssignStmt) {
+            const declaringStmt = local.getDeclaringStmt();
+            if (declaringStmt && declaringStmt instanceof ArkAssignStmt) {
+                latestAssignStmt = declaringStmt;
+            }
+        }
+        
+        if (!latestAssignStmt) {
+            return null;
+        }
+        
+        const rightOp = latestAssignStmt.getRightOp();
+        
+        // 情况1: 直接赋值字符串常量
+        if (rightOp instanceof StringConstant) {
+            return rightOp.getValue();
+        }
+        
+        // 情况2: 从另一个Local赋值（递归追踪）
+        if (rightOp instanceof Local) {
+            return this.traceStringLiteralValueInBlock(rightOp, currentBlock, visited);
+        }
+        
+        // 情况3: 从参数引用赋值
+        if (rightOp instanceof ArkParameterRef) {
+            const paramIndex = rightOp.getIndex();
+            
+            // 从调用点表达式中获取对应参数的值
+            const args = this.callsiteInvokeExpr.getArgs();
+            if (paramIndex >= 0 && paramIndex < args.length) {
+                const argValue = args[paramIndex];
+                
+                // 如果参数是字符串常量，返回其值
+                if (argValue instanceof StringConstant) {
+                    return argValue.getValue();
+                }
+                
+                // 如果参数是Local，递归追踪（需要在调用点的上下文中追踪）
+                // 注意：这里可能需要访问调用点所在的BasicBlock，但目前我们只有当前BasicBlock
+                // 所以暂时只处理常量情况
+                this.logger.debug(`Parameter at index ${paramIndex} is not a string constant, trace failed`);
+            } else {
+                this.logger.warn(`Parameter index ${paramIndex} out of bounds for callsite arguments`);
+            }
+            
+            return null;
+        }
+    
+        // 其他情况无法追溯
+        return null;
     }
 
     /**
