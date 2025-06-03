@@ -983,9 +983,17 @@ export class CFGBuilder {
 
                 // 创建函数调用，staticInvokeExpr
                 const callMethodSignature = funcType.getMethodSignature();
-
-                // 创建静态调用表达式
-                const callExpr = new ArkInstanceInvokeExpr(thisLocal as Local,callMethodSignature, bindArgs.slice(1));
+                const this_Local = thisLocal as Local;
+                let callExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr;
+                if(this_Local.getName() === GLOBAL_THIS_NAME || this_Local.getName().startsWith("%global_")){
+                    // 创建静态调用表达式
+                    callExpr = new ArkStaticInvokeExpr(callMethodSignature, bindArgs.slice(1));
+                }
+                else{
+                    // 创建实例调用表达式
+                    callExpr = new ArkInstanceInvokeExpr(thisLocal as Local,callMethodSignature, bindArgs.slice(1));
+                }
+                
                 // 创建赋值语句
                 const callStmt = new ArkAssignStmt(resultLocal, callExpr);
                 resultLocal.setDeclaringStmt(callStmt);
