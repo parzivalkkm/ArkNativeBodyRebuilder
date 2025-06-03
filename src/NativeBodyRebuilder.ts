@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import { LOG_LEVEL, LOG_MODULE_TYPE } from '@ArkAnalyzer/src/utils/logger';
 import ConsoleLogger from '@ArkAnalyzer/src/utils/logger';
 import { Scene } from '@ArkAnalyzer/src/Scene';
@@ -25,61 +25,147 @@ ConsoleLogger.configure(logPath, LOG_LEVEL.DEBUG, LOG_LEVEL.DEBUG);
  * 负责从IR文件读取数据，创建IR对象，然后为每个函数重建函数体
  */
 export class NativeBodyRebuilder {
-    private irFilePath: string;
+    private irFilePaths: string[];
     private scene: Scene;
-    private irModule: IRModule | null = null;
+    private irModules: Map<string, IRModule> = new Map(); // 存储多个IRModule
     
     private methodSubSignatureMap: Map<string, MethodSubSignatureMap[]> = new Map();
     private NapiCallExprMap: Map<string, ArkInstanceInvokeExpr[]> = new Map();
-    constructor(irFilePath: string, scene: Scene) {
-        this.irFilePath = irFilePath;
+    
+    // 修改构造函数，支持单个文件路径或文件路径数组
+    constructor(irFilePathOrPaths: string | string[], scene: Scene) {
+        if (Array.isArray(irFilePathOrPaths)) {
+            this.irFilePaths = irFilePathOrPaths;
+        } else if (this.isDirectory(irFilePathOrPaths)) {
+            // 如果是目录，扫描所有.ir.json文件
+            this.irFilePaths = this.scanIRFiles(irFilePathOrPaths);
+        } else {
+            // 单个文件
+            this.irFilePaths = [irFilePathOrPaths];
+        }
         this.scene = scene;
+        
+        logger.info(`Initialized with ${this.irFilePaths.length} IR file(s):`);
+        this.irFilePaths.forEach(path => logger.info(`  - ${path}`));
     }
 
     private rebuiltBodys: Array<ArkMethod> = [];
     
     /**
+     * 检查路径是否为目录
+     */
+    private isDirectory(path: string): boolean {
+        try {
+            return statSync(path).isDirectory();
+        } catch {
+            return false;
+        }
+    }
+    
+    /**
+     * 扫描目录中的所有IR文件
+     */
+    private scanIRFiles(dirPath: string): string[] {
+        try {
+            const files = readdirSync(dirPath);
+            const irFiles: string[] = [];
+            
+            for (const file of files) {
+                const fullPath = path.join(dirPath, file);
+                const stat = statSync(fullPath);
+                
+                if (stat.isFile() && file.endsWith('.ir.json')) {
+                    irFiles.push(fullPath);
+                } else if (stat.isDirectory()) {
+                    // 递归扫描子目录
+                    irFiles.push(...this.scanIRFiles(fullPath));
+                }
+            }
+            
+            return irFiles;
+        } catch (error) {
+            logger.error(`Failed to scan directory: ${dirPath}`, error);
+            return [];
+        }
+    }
+    
+    /**
      * 重建Native函数体
      */
     public rebuildNativeBody(): void {
-        // 1. 读取IR文件
-        const content = this.readIRFile();
-        if (!content) {
+        // 1. 读取并解析所有IR文件
+        this.loadAllIRFiles();
+        
+        if (this.irModules.size === 0) {
+            logger.warn('No IR modules loaded successfully');
             return;
         }
         
-        // 2. 解析IR文件，创建IRModule对象
-        const jsonIR = this.parseIRContent(content);
-        if (!jsonIR) {
-            return;
+        // 2. 为每个IRModule创建对应的ArkFile和ArkClass
+        const moduleClassMap = new Map<string, ArkClass>();
+        for (const [moduleName, irModule] of this.irModules) {
+            const moduleFile = this.createArkFile(irModule);
+            const moduleClass = this.createArkClass(moduleFile, irModule);
+            moduleClassMap.set(moduleName, moduleClass);
         }
-        
-        // 3. 创建IRModule
-        this.irModule = IRModule.fromJson(jsonIR);
-        logger.info(`Created IRModule: ${this.irModule.getModuleName()}`);
-        
-        // 4. 创建ArkFile和ArkClass
-        const moduleFile = this.createArkFile();
-        const moduleClass = this.createArkClass(moduleFile);
 
-        // 5. 遍历Ark Project，找到napi调用并记录
+        // 3. 遍历Ark Project，找到napi调用并记录
         this.recordNapiCalls();
-        // 6. 导出exportMap
+        
+        // 4. 导出exportMap
         this.buildNapiExportMap();
-        // 7. 遍历函数，重建函数体
-        this.rebuildFunctionBodies(moduleClass);
+        
+        // 5. 重建所有模块的函数体
+        this.rebuildAllFunctionBodies(moduleClassMap);
+    }
+    
+    /**
+     * 加载所有IR文件
+     */
+    private loadAllIRFiles(): void {
+        for (const irFilePath of this.irFilePaths) {
+            try {
+                // 读取IR文件
+                const content = this.readIRFile(irFilePath);
+                if (!content) {
+                    continue;
+                }
+                
+                // 解析IR文件内容
+                const jsonIR = this.parseIRContent(content, irFilePath);
+                if (!jsonIR) {
+                    continue;
+                }
+                
+                // 创建IRModule
+                const irModule = IRModule.fromJson(jsonIR);
+                const moduleName = irModule.getModuleName();
+                
+                if (this.irModules.has(moduleName)) {
+                    logger.warn(`Duplicate module name found: ${moduleName}. Overwriting previous module.`);
+                }
+                
+                this.irModules.set(moduleName, irModule);
+                logger.info(`Loaded IRModule: ${moduleName} from ${irFilePath}`);
+                
+            } catch (error) {
+                logger.error(`Failed to process IR file: ${irFilePath}`, error);
+            }
+        }
+        
+        logger.info(`Successfully loaded ${this.irModules.size} IR module(s)`);
     }
     
     /**
      * 读取IR文件内容
      */
-    private readIRFile(): string | null {
+    private readIRFile(irFilePath: string): string | null {
         try {
-            const content = readFileSync(this.irFilePath, 'utf-8');
-            logger.debug(`Read IR file: ${this.irFilePath}`);
+            const content = readFileSync(irFilePath, 'utf-8');
+            logger.debug(`Read IR file: ${irFilePath}`);
             return content;
         } catch (error) {
-            logger.error(`Failed to read IR file: ${this.irFilePath}`, error);
+            logger.error(`Failed to read IR file: ${irFilePath}`, error);
             return null;
         }
     }
@@ -87,13 +173,13 @@ export class NativeBodyRebuilder {
     /**
      * 解析IR文件内容
      */
-    private parseIRContent(content: string): any {
+    private parseIRContent(content: string, filePath: string): any {
         try {
             const jsonIR = JSON.parse(content);
-            logger.debug(`Parsed IR file successfully`);
+            logger.debug(`Parsed IR file successfully: ${filePath}`);
             return jsonIR;
         } catch (error) {
-            logger.error(`Failed to parse IR content`, error);
+            logger.error(`Failed to parse IR content from: ${filePath}`, error);
             return null;
         }
     }
@@ -101,17 +187,13 @@ export class NativeBodyRebuilder {
     /**
      * 创建ArkFile
      */
-    private createArkFile(): ArkFile {
-        if (!this.irModule) {
-            throw new Error('IRModule is not initialized');
-        }
-        
+    private createArkFile(irModule: IRModule): ArkFile {
         const moduleFile = new ArkFile(Language.TYPESCRIPT);
         moduleFile.setScene(this.scene);
         
         const moduleFileSignature = new FileSignature(
             this.scene.getProjectName(),
-            `@nodeapiFile${this.irModule.getModuleName()}`
+            `@nodeapiFile${irModule.getModuleName()}`
         );
         
         moduleFile.setFileSignature(moduleFileSignature);
@@ -123,16 +205,12 @@ export class NativeBodyRebuilder {
     /**
      * 创建ArkClass
      */
-    private createArkClass(moduleFile: ArkFile): ArkClass {
-        if (!this.irModule) {
-            throw new Error('IRModule is not initialized');
-        }
-        
+    private createArkClass(moduleFile: ArkFile, irModule: IRModule): ArkClass {
         const moduleClass = new ArkClass();
         moduleClass.setDeclaringArkFile(moduleFile);
         
         const moduleClassSignature = new ClassSignature(
-            `@nodeapiClass${this.irModule.getModuleName()}`,
+            `@nodeapiClass${irModule.getModuleName()}`,
             moduleClass.getDeclaringArkFile().getFileSignature(),
             moduleClass.getDeclaringArkNamespace()?.getSignature() || null
         );
@@ -212,71 +290,101 @@ export class NativeBodyRebuilder {
     }
 
     /**
-     * 重建所有函数体
+     * 重建所有模块的函数体
      */
-    private rebuildFunctionBodies(moduleClass: ArkClass): void {
-        if (!this.irModule) {
-            throw new Error('IRModule is not initialized');
-        }
-
+    private rebuildAllFunctionBodies(moduleClassMap: Map<string, ArkClass>): void {
+        let totalRebuiltFunctions = 0;
+        
         // 遍历所有napicallexpr，为每一个调用创建对应的函数
         for(const [importFrom, invokeExprs] of this.NapiCallExprMap.entries()){
-            logger.info(`importFrom: ${importFrom}`);
+            logger.info(`Processing importFrom: ${importFrom}`);
             const libname = importFrom ? importFrom.replace(/^lib/, '') : '';
-            if(this.irModule.getModuleName() === libname){
-                for(const invokeExpr of invokeExprs){
-                    logger.info(`invokeExpr: ${invokeExpr.toString()}`);
-                    // get invoke Expr name
-                    const invokeExprName = invokeExpr.getMethodSignature().getMethodSubSignature().getMethodName();
-                    const irFunction = this.irModule.getFunctionByName(invokeExprName);
-                    if(irFunction){
-                        logger.info(`irFunction: ${irFunction.getName()}`);
-                    }
-                    else{
-                        logger.info(`irFunction not found`);
-                    }
+            
+            // 查找对应的IRModule
+            const irModule = this.irModules.get(libname);
+            if (!irModule) {
+                logger.warn(`No IRModule found for libname: ${libname}`);
+                continue;
+            }
+            
+            const moduleClass = moduleClassMap.get(libname);
+            if (!moduleClass) {
+                logger.warn(`No ModuleClass found for libname: ${libname}`);
+                continue;
+            }
+            
+            let moduleRebuiltCount = 0;
+            for(const invokeExpr of invokeExprs){
+                logger.info(`Processing invokeExpr: ${invokeExpr.toString()}`);
+                // get invoke Expr name
+                const invokeExprName = invokeExpr.getMethodSignature().getMethodSubSignature().getMethodName();
+                const irFunction = irModule.getFunctionByName(invokeExprName);
+                
+                if(irFunction){
+                    logger.info(`Found irFunction: ${irFunction.getName()}`);
+                    
                     // 为每个函数创建FunctionBodyRebuilder
-                    if (irFunction) {
-                        const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap, invokeExpr);
-                        // 重建函数体
-                        this.rebuiltBodys.push(rebuilder.rebuildFunctionBody());
-
-                        logger.info(`rebuilder done`);
-                    }
+                    const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap, invokeExpr);
+                    
+                    // 重建函数体
+                    this.rebuiltBodys.push(rebuilder.rebuildFunctionBody());
+                    moduleRebuiltCount++;
+                    
+                    logger.info(`Rebuilder done for function: ${irFunction.getName()}`);
+                } else {
+                    logger.warn(`IRFunction not found for: ${invokeExprName}`);
                 }
             }
+            
+            totalRebuiltFunctions += moduleRebuiltCount;
+            logger.info(`Rebuilt ${moduleRebuiltCount} functions for module: ${libname}`);
         }
         
+        logger.info(`Total rebuilt functions: ${totalRebuiltFunctions} across ${this.irModules.size} modules`);
+    }
 
-        // 遍历所有函数
-        // this.irModule.getFunctions().forEach(irFunction => {
-        //     logger.info(`Processing function: ${irFunction.getName()}`);
-            
-        //     // 为每个函数创建FunctionBodyRebuilder
-        //     const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap);
-            
-        //     // 重建函数体
-        //     rebuilder.rebuildFunctionBody();
-        // });
+    /**
+     * 获取所有已加载的IRModule
+     */
+    public getIRModules(): Map<string, IRModule> {
+        return this.irModules;
+    }
+    
+    /**
+     * 获取指定名称的IRModule
+     */
+    public getIRModule(moduleName: string): IRModule | undefined {
+        return this.irModules.get(moduleName);
+    }
+    
+    /**
+     * 获取所有重建的方法体
+     */
+    public getRebuiltBodies(): Array<ArkMethod> {
+        return this.rebuiltBodys;
     }
 
     public printModuleDetails(): void {
-        if (!this.irModule) {
-            logger.warn('IRModule is not initialized');
+        if (this.irModules.size === 0) {
+            logger.warn('No IRModules are loaded');
             return;
         }
         
-        logger.info(`Module Details:`);
-        logger.info(`HAP Name: ${this.irModule.getHapName()}`);
-        logger.info(`SO Name: ${this.irModule.getSoName()}`);
-        logger.info(`Module Name: ${this.irModule.getModuleName()}`);
-        logger.info(`Functions: ${this.irModule.getFunctions().length}`);
+        logger.info(`=== Module Details (Total: ${this.irModules.size}) ===`);
         
-        this.irModule.getFunctions().forEach((func, index) => {
-            logger.info(`  ${index + 1}. Function: ${func.getName()}`);
-            logger.info(`     Parameters: ${func.getParameters().size}`);
-            logger.info(`     Instructions: ${func.getInstructions().length}`);
-        });
+        for (const [moduleName, irModule] of this.irModules) {
+            logger.info(`Module: ${moduleName}`);
+            logger.info(`  HAP Name: ${irModule.getHapName()}`);
+            logger.info(`  SO Name: ${irModule.getSoName()}`);
+            logger.info(`  Functions: ${irModule.getFunctions().length}`);
+            
+            irModule.getFunctions().forEach((func, index) => {
+                logger.info(`    ${index + 1}. Function: ${func.getName()}`);
+                logger.info(`       Parameters: ${func.getParameters().size}`);
+                logger.info(`       Instructions: ${func.getInstructions().length}`);
+            });
+            logger.info(''); // 空行分隔
+        }
     }
 }
 
