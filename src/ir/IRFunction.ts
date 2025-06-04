@@ -1,6 +1,4 @@
-
-
-import { IRInstruction, IRInstructionFactory, IRCallInstruction } from './IRInstruction';
+import { IRInstruction, IRInstructionFactory, IRCallInstruction, IRReturnInstruction, IRPhiInstruction } from './IRInstruction';
 import { IRValue, IRVariable, IRParameter, IRValueFactory } from './IRValue';
 import { FunctionIR, ModuleIR } from './JsonObjectInterface';
 import { ValueType } from './ValueType';
@@ -121,10 +119,110 @@ export class IRFunction {
                     this.valueMap.set(variable.getName(), variable);
 
                 }
+                return; // 假设只需要处理第一个napi_get_cb_info调用
             }
         });
     }
     
+    /**
+     * 创建当前IRFunction的深拷贝
+     */
+    public copy(): IRFunction {
+        const copiedFunction = new IRFunction(this.name);
+        
+        // 拷贝参数
+        this.parameters.forEach((param, name) => {
+            copiedFunction.addParameter(name, param.getParameterType());
+        });
+        
+        // 拷贝指令
+        this.instructions.forEach(instruction => {
+            const copiedInstruction = this.copyInstruction(instruction);
+            if (copiedInstruction) {
+                copiedFunction.addInstruction(copiedInstruction);
+            }
+        });
+        
+        // 拷贝真正参数
+        this.realArgs.forEach(arg => {
+            const copiedArg = new IRVariable(arg.getName(), arg.getValueType());
+            copiedFunction.addRealArg(copiedArg);
+        });
+        
+        return copiedFunction;
+    }
+      /**
+     * 拷贝指令的辅助方法
+     */
+    private copyInstruction(instruction: IRInstruction): IRInstruction | null {
+        if (instruction instanceof IRCallInstruction) {
+            const callInst = instruction as IRCallInstruction;
+            const copiedCall = new IRCallInstruction(callInst.getCallsite(), callInst.getTarget());
+            
+            // 拷贝操作数
+            callInst.getOperands().forEach(operand => {
+                const copiedOperand = this.copyIRValue(operand);
+                copiedCall.addOperand(copiedOperand);
+            });
+            
+            // 拷贝参数操作数
+            callInst.getArgsOperands().forEach(arg => {
+                const copiedArg = this.copyIRValue(arg);
+                copiedCall.addArgsOperand(copiedArg);
+            });
+            
+            // 拷贝返回值
+            callInst.getReturnValues().forEach((variable, name) => {
+                const index = callInst.getReturnValueIndex(name);
+                if (index !== undefined) {
+                    const copiedVariable = this.copyIRValue(variable) as IRVariable;
+                    copiedCall.setReturnValue(name, index, copiedVariable);
+                }
+            });
+            
+            return copiedCall;
+        } else if (instruction instanceof IRReturnInstruction) {
+            const retInst = instruction as IRReturnInstruction;
+            const copiedOperand = this.copyIRValue(retInst.getOperand());
+            return new IRReturnInstruction(copiedOperand);
+        } else if (instruction instanceof IRPhiInstruction) {
+            const phiInst = instruction as IRPhiInstruction;
+            const copiedResult = this.copyIRValue(phiInst.getResult()) as IRVariable;
+            const copiedPhi = new IRPhiInstruction(copiedResult);
+            
+            phiInst.getOperands().forEach((operand: IRValue) => {
+                const copiedOperand = this.copyIRValue(operand);
+                copiedPhi.addOperand(copiedOperand);
+            });
+            
+            return copiedPhi;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 拷贝IRValue的辅助方法
+     */
+    private copyIRValue(value: IRValue): IRValue {
+        if (value instanceof IRParameter) {
+            const copied = new IRParameter(value.getName(), value.getParameterType(), value.getValueType());
+            if (value.getArktsValue()) {
+                copied.setArktsValue(value.getArktsValue()!);
+            }
+            return copied;
+        } else if (value instanceof IRVariable) {
+            const copied = new IRVariable(value.getName(), value.getValueType());
+            if (value.getArktsValue()) {
+                copied.setArktsValue(value.getArktsValue()!);
+            }
+            return copied;
+        } else {
+            // 对于常量，可以直接返回，因为它们是不可变的
+            return value;
+        }
+    }
+
     /**
      * 从JSON对象创建IRFunction
      */
@@ -205,4 +303,4 @@ export class IRModule {
         
         return irModule;
     }
-} 
+}

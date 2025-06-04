@@ -321,16 +321,17 @@ export class NativeBodyRebuilder {
                 const irFunction = irModule.getFunctionByName(invokeExprName);
                 
                 if(irFunction){
-                    logger.info(`Found irFunction: ${irFunction.getName()}`);
+                    const copyIrFunction = irFunction.copy();
+                    logger.info(`Found irFunction: ${copyIrFunction.getName()}`);
                     
                     // 为每个函数创建FunctionBodyRebuilder
-                    const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, irFunction, this.methodSubSignatureMap, invokeExpr);
+                    const rebuilder = new FunctionBodyRebuilder(this.scene, moduleClass, copyIrFunction, this.methodSubSignatureMap, invokeExpr);
                     
                     // 重建函数体
                     this.rebuiltBodys.push(rebuilder.rebuildFunctionBody());
                     moduleRebuiltCount++;
                     
-                    logger.info(`Rebuilder done for function: ${irFunction.getName()}`);
+                    logger.info(`Rebuilder done for function: ${copyIrFunction.getName()}`);
                 } else {
                     logger.warn(`IRFunction not found for: ${invokeExprName}`);
                 }

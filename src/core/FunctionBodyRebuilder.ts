@@ -33,6 +33,11 @@ export class FunctionBodyRebuilder {
     private defUseMap: { [variable: string]: { definedIn: IRInstruction[]; usedIn: IRInstruction[] } }
     = {};
     private callsiteInvokeExpr: ArkInstanceInvokeExpr;
+    private static functionNumber: number = 0; // 用于生成唯一的函数编号
+
+    private getFunctionNumber(): number {
+        return FunctionBodyRebuilder.functionNumber++;
+    }
 
     // TODO 在functionBodyRebuilder之前
     // 需要获取调用上下文，对于传入参数为object以及Function的情况
@@ -109,6 +114,7 @@ export class FunctionBodyRebuilder {
         }
         
         if (!methodSubSignature) {
+            this.logger.warn(`No method sub-signature found for function: ${this.irFunction.getName()}, creating default signature`);
             methodSubSignature = ArkSignatureBuilder.buildMethodSubSignatureFromMethodName(
                 `@nodeapiFunction${this.irFunction.getName()}`
             );
@@ -127,7 +133,7 @@ export class FunctionBodyRebuilder {
                 if (argType instanceof UnknownType) {
                     this.logger.warn(`Argument type for ${paramName} is unknown, setting to ObjectType`);
                     // TODO 此处存在问题，
-                    param.setType(argType);
+                    param.setType(StringType.getInstance());
                     this.logger.warn(`Set param ${paramName} type to ${argType}`);
                 }
                 else{
@@ -138,6 +144,13 @@ export class FunctionBodyRebuilder {
                 
             }
         }
+
+        const newMethodName = `@nodeapiFunction${this.irFunction.getName()}_${this.getFunctionNumber()}`;
+        methodSubSignature = new MethodSubSignature(
+            newMethodName,
+            methodSubSignature.getParameters(),
+            methodSubSignature.getReturnType() // 克隆返回类型
+        );
         
 
         const methodSignature = new MethodSignature(
@@ -147,7 +160,7 @@ export class FunctionBodyRebuilder {
         this.callsiteInvokeExpr.setMethodSignature(methodSignature);
         
         this.functionMethod.setImplementationSignature(methodSignature);
-        this.functionMethod.setLineCol(0);
+        // this.functionMethod.setLineCol(0);
         
         // 更新方法并添加到声明类
         checkAndUpdateMethod(this.functionMethod, this.declaringClass);
