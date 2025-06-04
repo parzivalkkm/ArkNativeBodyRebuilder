@@ -84,6 +84,8 @@ export class CFGBuilder {
         if (methodParams.length > 0) {
             if (this.irFunction.getRealArgs().length !== methodParams.length) {
                 this.logger.error(`Mismatch between method parameters and real arguments.`);
+                this.logger.error(`Method parameters: ${methodParams.map(p => p.getName()).join(', ')}`);
+                this.logger.error(`Real arguments: ${realArgs.map(arg => arg.getName()).join(', ')}`);
             }
             // 如果方法已有参数定义，为每个参数创建Local并添加赋值语句
             methodParams.forEach((param, index) => {
@@ -964,7 +966,9 @@ export class CFGBuilder {
                 return currentBlock;
             }
             // 创建一个fieldSignature
-            const fieldSignature = new FieldSignature(fieldName, ClassSignature.DEFAULT, UnknownType.getInstance(), false);
+            const filedtype = valueValue.getType();
+            const fileddeclaringSignature = (objectValue.getType() as ClassType).getClassSignature();
+            const fieldSignature = new FieldSignature(fieldName, fileddeclaringSignature, filedtype, false);
             // InstanceFieldRef
             const instanceFieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
             // AssignStmt
@@ -1002,12 +1006,10 @@ export class CFGBuilder {
                     return currentBlock;
                 }
                 // 创建字段签名
-                const fieldSignature = new FieldSignature(
-                    fieldName,
-                    ClassSignature.DEFAULT,  // 声明该字段的类签名
-                    UnknownType.getInstance(),  // 字段类型
-                    false  // 非静态字段
-                );
+                // 创建一个fieldSignature
+                const filedtype = UnknownType.getInstance(); // 暂时设为UnknownType，可能需要改进
+                const fileddeclaringSignature = (objectValue.getType() as ClassType).getClassSignature();
+                const fieldSignature = new FieldSignature(fieldName, fileddeclaringSignature, filedtype, false);
                 
                 // 创建字段引用
                 const fieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
@@ -1186,12 +1188,10 @@ export class CFGBuilder {
             }
 
             // 创建一个 fieldSignature，直接使用字符串常量的值作为字段名
-            const fieldSignature = new FieldSignature(
-                fieldName,  
-                ClassSignature.DEFAULT, 
-                UnknownType.getInstance(),  
-                false  
-            );
+            // 创建一个fieldSignature
+            const filedtype = valueValue.getType();
+            const fileddeclaringSignature = (objectValue.getType() as ClassType).getClassSignature();
+            const fieldSignature = new FieldSignature(fieldName, fileddeclaringSignature, filedtype, false);
             // 创建实例字段引用
             const instanceFieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
             // 创建赋值语句
@@ -1233,12 +1233,10 @@ export class CFGBuilder {
                 const resultLocal = new Local(`%result_${this.constIdCounter++}`, AnyType.getInstance());
                 
                 // 创建字段签名
-                const fieldSignature = new FieldSignature(
-                    fieldName,  // 直接使用字符串值作为字段名
-                    ClassSignature.DEFAULT,  // 声明该字段的类签名
-                    UnknownType.getInstance(),  // 字段类型
-                    false  // 非静态字段
-                );
+                // 创建一个fieldSignature
+            const filedtype = UnknownType.getInstance(); // 暂时设为UnknownType，可能需要改进
+            const fileddeclaringSignature = (objectValue.getType() as ClassType).getClassSignature();
+            const fieldSignature = new FieldSignature(fieldName, fileddeclaringSignature, filedtype, false);
                 
                 // 创建字段引用
                 const fieldRef = new ArkInstanceFieldRef(objectValue as Local, fieldSignature);
