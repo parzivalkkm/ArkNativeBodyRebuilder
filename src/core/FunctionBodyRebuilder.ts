@@ -19,7 +19,7 @@ import ConsoleLogger from '@ArkAnalyzer/src/utils/logger';
 import { IRInstruction } from '../ir/IRInstruction';
 import { MethodSubSignatureMap } from '../ir/JsonObjectInterface';
 import { ArkInstanceInvokeExpr, ArkStaticInvokeExpr, ArkPtrInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
-import { StringType, UnknownType, FunctionType } from '@ArkAnalyzer/src/core/base/Type';
+import { StringType, UnknownType, FunctionType, ClassType } from '@ArkAnalyzer/src/core/base/Type';
 import { ArkParameterRef } from '@ArkAnalyzer/src/core/base/Ref';
 import { ArkAssignStmt } from '@ArkAnalyzer/src/core/base/Stmt';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
@@ -210,11 +210,21 @@ export class FunctionBodyRebuilder {
         // 根据调用类型设置方法签名
         if (this.callsiteInvokeExpr instanceof ArkInstanceInvokeExpr) {
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
+            // let base = this.callsiteInvokeExpr.getBase();
+            // // TODO: 更新base的类型
+            // // base type改为 declaringClass
+            // if (base instanceof Local) {
+            //     // 确保base的类型与declaringClass匹配
+            //     let declaringClassType = new ClassType(this.declaringClass.getSignature(), this.declaringClass.getRealTypes());
+
+            //     base.setType(declaringClassType);
+            //     this.logger.debug(`Updated base type for ArkInstanceInvokeExpr: ${base.getName()} to ${this.declaringClass.getSignature()}`);
+            // }
         } else if (this.callsiteInvokeExpr instanceof ArkStaticInvokeExpr) {
             // 对于静态调用，需要更新方法签名
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
         } else if (this.callsiteInvokeExpr instanceof ArkPtrInvokeExpr) {
-            // 对于指针调用（具名导入），需要更新方法签名
+            // TODO: 对于指针调用，需要更新方法签名
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
         }
         

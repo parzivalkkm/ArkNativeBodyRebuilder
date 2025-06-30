@@ -1,6 +1,7 @@
 node_modules/
 out/
 taintanalysis/
+taintanalysis-CHA/
 tests/resources/test_resources/
 tests/NativeBodyRebuilderTest_mine.ts
 tests/resources/ifdsTestConfig_mine.json
