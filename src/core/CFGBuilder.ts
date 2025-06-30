@@ -9,7 +9,7 @@ import { Cfg } from '@ArkAnalyzer/src/core/graph/Cfg';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
 import { ArkAssignStmt, ArkInvokeStmt, ArkReturnStmt, ArkReturnVoidStmt, ArkThrowStmt } from '@ArkAnalyzer/src/core/base/Stmt';
 import { ArkArrayRef, ArkInstanceFieldRef, ArkParameterRef, ArkThisRef } from '@ArkAnalyzer/src/core/base/Ref';
-import { ArkDeleteExpr, ArkInstanceInvokeExpr, ArkInstanceOfExpr, ArkNewArrayExpr, ArkNewExpr, ArkPhiExpr, ArkStaticInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
+import { ArkDeleteExpr, ArkInstanceInvokeExpr, ArkInstanceOfExpr, ArkNewArrayExpr, ArkNewExpr, ArkPhiExpr, ArkStaticInvokeExpr, ArkPtrInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { Constant, NullConstant, NumberConstant, StringConstant } from '@ArkAnalyzer/src/core/base/Constant';
 import { ValueUtil } from '@ArkAnalyzer/src/core/common/ValueUtil';
 import { Type, NumberType, StringType, BooleanType, VoidType, ArrayType, AnyType, UnknownType, ClassType, FunctionType } from '@ArkAnalyzer/src/core/base/Type';
@@ -25,7 +25,7 @@ export class CFGBuilder {
     private logger: Logger;
     private irFunction: IRFunction;
     private arkMethod: ArkMethod;
-        private callsiteInvokeExpr: ArkInstanceInvokeExpr;
+        private callsiteInvokeExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr;
     
     // 存储变量到Local的映射
     private varLocalMap: Map<string, Local> = new Map();
@@ -33,7 +33,7 @@ export class CFGBuilder {
     private paramIndexMap: Map<Local, number> = new Map();
     private constIdCounter: number = 0;
     
-    constructor(irFunction: IRFunction, arkMethod: ArkMethod, logger: Logger, invokeExpr: ArkInstanceInvokeExpr) {
+    constructor(irFunction: IRFunction, arkMethod: ArkMethod, logger: Logger, invokeExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr) {
         this.irFunction = irFunction;
         this.arkMethod = arkMethod;
         this.logger = logger;
@@ -449,10 +449,9 @@ export class CFGBuilder {
         if (lengthResultVar) {
             // 为长度创建一个数字类型的Local
             const lengthLocal = new Local(`%length_${this.constIdCounter++}`, NumberType.getInstance());
-            
-            // 暂时使用一个固定值作为长度（实际应该计算）
-            const unknownBaseSignature = new ClassSignature("", new FileSignature("@%unk", "unk"), null);   // TODO:这个reference的信息不完整，可能需要改进
-            const fieldSignature = new FieldSignature("length", unknownBaseSignature,UnknownType. getInstance(), false);
+              // 暂时使用一个固定值作为长度（实际应该计算）
+            const stringClassSignature = new ClassSignature("String", new FileSignature("ES2015", "BuiltinClass"), null);
+            const fieldSignature = new FieldSignature("length", stringClassSignature, NumberType.getInstance(), false);
             const refExpr = new ArkInstanceFieldRef(stringValue as Local, fieldSignature);
             const lengthAssignStmt = new ArkAssignStmt(lengthLocal, refExpr);
             lengthLocal.setDeclaringStmt(lengthAssignStmt);
@@ -645,9 +644,8 @@ export class CFGBuilder {
 
             const resultVar = this.findReturnValueByIndex(callInst, "2");
             if(resultVar){
-                const local = new Local(`%array_length_${this.constIdCounter++}`, NumberType.getInstance());
-                const unknownBaseSignature = new ClassSignature("", new FileSignature("@%unk", "unk"), null);   // TODO:这个reference的信息不完整，可能需要改进
-                const fieldSignature = new FieldSignature("length", unknownBaseSignature,UnknownType. getInstance(), false);
+                const local = new Local(`%array_length_${this.constIdCounter++}`, NumberType.getInstance());                const arrayClassSignature = new ClassSignature("Array", new FileSignature("ES2015", "BuiltinClass"), null);
+                const fieldSignature = new FieldSignature("length", arrayClassSignature, NumberType.getInstance(), false);
                 const refExpr = new ArkInstanceFieldRef(arrayValue, fieldSignature);
                 const assignStmt = new ArkAssignStmt(local, refExpr);
                 currentBlock.addStmt(assignStmt);
@@ -1384,11 +1382,9 @@ export class CFGBuilder {
                 return currentBlock;
             }
 
-            const tmpLocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());
-
-            // 创建bind函数的方法签名
-            const fileSignature = new FileSignature("%unk", "%unk");
-            const classSignature = new ClassSignature("", fileSignature, null);
+            const tmpLocal = new Local(`%tmp_${this.constIdCounter++}`, UnknownType.getInstance());            // 创建bind函数的方法签名
+            const fileSignature = new FileSignature("ES2015", "BuiltinClass");
+            const classSignature = new ClassSignature("Function", fileSignature, null);
             const methodSubSignature = new MethodSubSignature("bind", [], UnknownType.getInstance(), false);
             const methodSignature = new MethodSignature(classSignature, methodSubSignature);
 
@@ -1422,7 +1418,7 @@ export class CFGBuilder {
                 // 创建函数调用，staticInvokeExpr
                 const callMethodSignature = funcType.getMethodSignature();
                 const this_Local = thisLocal as Local;
-                let callExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr;
+                let callExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr;
                 if(this_Local.getName() === GLOBAL_THIS_NAME || this_Local.getName().startsWith("%global_")){
                     // 创建静态调用表达式
                     callExpr = new ArkStaticInvokeExpr(callMethodSignature, bindArgs.slice(1));
@@ -1594,11 +1590,10 @@ export class CFGBuilder {
         return targetMethodSig;
     }
 
-    private processErrorThrowCall(callInst: IRCallInstruction, currentBlock: BasicBlock): BasicBlock {
-        // 处理错误抛出调用
+    private processErrorThrowCall(callInst: IRCallInstruction, currentBlock: BasicBlock): BasicBlock {        // 处理错误抛出调用
         // 处理函数调用
-        const unkFileSignature = new FileSignature("%unk", "%unk");
-        const errorClassSignature = new ClassSignature("Error", unkFileSignature, null);
+        const errorFileSignature = new FileSignature("ES2015", "BuiltinClass");
+        const errorClassSignature = new ClassSignature("Error", errorFileSignature, null);
         const errorType = new ClassType(errorClassSignature);
         // TODO parameter数量是0？是否不正确？
         const constructorSignature = new MethodSignature(errorClassSignature, new MethodSubSignature("constructor", [], errorType, false));
@@ -1799,8 +1794,7 @@ export class CFGBuilder {
         
         return newValue;
     }
-    
-    /**
+      /**
      * 将ValueType映射到ArkType
      */
     private mapValueTypeToArkType(valueType: ValueType): Type {
@@ -1812,12 +1806,74 @@ export class CFGBuilder {
             case ValueType.Boolean:
                 return BooleanType.getInstance();
             case ValueType.Array:
-                return new ArrayType(AnyType.getInstance(), 1); // TODO: 数组类型的维度和元素类型可能需要更复杂的处理
+                return new ArrayType(AnyType.getInstance(), 1); // TODO: 数组类型的维度和元素类型可能需要更复杂的处理            case ValueType.Object:
+                // 修复：对于Object类型，需要创建正确的ClassType而不是StringType
+                // 尝试从调用上下文推断正确的类型
+                console.log("【CFGBuilder调试】正在处理ValueType.Object，调用inferObjectClassType");
+                const inferredType = this.inferObjectClassType(valueType);
+                console.log(`【CFGBuilder调试】推断出的对象类型: ${inferredType}`);
+                return inferredType;
+            case ValueType.Any:
+                return AnyType.getInstance();
+            case ValueType.Undefined:
+                return UnknownType.getInstance(); // 使用UnknownType表示undefined
+            case ValueType.Null:
+                return UnknownType.getInstance(); // 使用UnknownType表示null
             default:
-                // 对于其他类型，目前简单返回Object类型
-                this.logger.warn(`Unsupported value type: ${valueType}, using Object type`);
-                return StringType.getInstance(); // 临时使用String类型作为默认
+                // 对于其他类型，返回UnknownType而不是StringType                this.logger.warn(`Unsupported value type: ${valueType}, using UnknownType`);
+                return UnknownType.getInstance();
         }
+    }    /**
+     * 推断Object类型的正确ClassType
+     * 根据调用上下文和参数信息推断对象的实际类型
+     */
+    private inferObjectClassType(valueType: ValueType): Type {
+        console.log("【inferObjectClassType调试】开始推断对象类型");
+        
+        // 尝试从调用上下文推断对象类型
+        // 如果有调用表达式上下文，尝试从参数类型推断
+        if (this.callsiteInvokeExpr) {
+            const args = this.callsiteInvokeExpr.getArgs();
+            console.log(`【inferObjectClassType调试】调用上下文参数数量: ${args.length}`);
+            
+            // 检查参数是否有具体的ClassType
+            for (let i = 0; i < args.length; i++) {
+                const arg = args[i];
+                const argType = arg.getType();
+                console.log(`【inferObjectClassType调试】参数${i}类型: ${argType.constructor.name}`);
+                if (argType instanceof ClassType) {
+                    console.log(`【inferObjectClassType调试】从调用上下文推断类型: ${argType.getClassSignature()}`);
+                    this.logger.debug(`Inferred object type from call context: ${argType.getClassSignature()}`);
+                    return argType;
+                }
+            }
+        } else {
+            console.log("【inferObjectClassType调试】无调用上下文");
+        }
+        
+        // 尝试从当前方法的参数推断
+        const methodParams = this.arkMethod.getSignature().getMethodSubSignature().getParameters();
+        console.log(`【inferObjectClassType调试】方法参数数量: ${methodParams.length}`);
+        for (let i = 0; i < methodParams.length; i++) {
+            const param = methodParams[i];
+            const paramType = param.getType();
+            console.log(`【inferObjectClassType调试】方法参数${i}类型: ${paramType.constructor.name}`);
+            if (paramType instanceof ClassType) {
+                console.log(`【inferObjectClassType调试】从方法参数推断类型: ${paramType.getClassSignature()}`);
+                this.logger.debug(`Inferred object type from method parameter: ${paramType.getClassSignature()}`);
+                return paramType;
+            }
+        }
+        
+        // 如果无法推断出具体类型，创建一个通用的Object类型
+        // 但使用正确的类签名而不是@%unk/%unk
+        const fileSignature = new FileSignature("ES2015", "BuiltinClass");
+        const classSignature = new ClassSignature("Object", fileSignature, null);
+        const objectType = new ClassType(classSignature, undefined);
+        
+        console.log(`【inferObjectClassType调试】使用通用Object类型: ${classSignature}`);
+        this.logger.debug(`Using generic Object type for ValueType.Object: ${classSignature}`);
+        return objectType;
     }
 
     private traceStringLiteralValueInBlock(value: Value, currentBlock: BasicBlock, visited: Set<Local> = new Set()): string | null {
@@ -1961,4 +2017,4 @@ export class CFGBuilder {
         
     //     return currentBlock;
     // }
-} 
+}
