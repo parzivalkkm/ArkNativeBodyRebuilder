@@ -213,11 +213,10 @@ export class NativeModuleManager {
     }
 
     /**
-     * 重建所有模块的函数体（使用CallDetailInfo）
+     * 重建所有模块的函数体（使用包含签名的CallDetailInfo）
      */
     public rebuildAllModuleFunctionsWithCallDetails(
-        callDetailsMap: Map<string, CallDetailInfo[]>,
-        methodSubSignatureMap: Map<string, MethodSubSignatureMap[]>
+        callDetailsMap: Map<string, CallDetailInfo[]>
     ): ArkMethod[] {
         const allRebuiltMethods: ArkMethod[] = [];
         let totalRebuiltFunctions = 0;
@@ -234,8 +233,8 @@ export class NativeModuleManager {
                 continue;
             }
             
-            // 重建模块的函数（使用CallDetailInfo）
-            const rebuiltMethods = module.rebuildMultipleFunctionsWithCallDetails(callDetails, methodSubSignatureMap);
+            // 重建模块的函数（使用包含签名的CallDetailInfo）
+            const rebuiltMethods = module.rebuildMultipleFunctionsWithCallDetails(callDetails);
             allRebuiltMethods.push(...rebuiltMethods);
             totalRebuiltFunctions += rebuiltMethods.length;
             

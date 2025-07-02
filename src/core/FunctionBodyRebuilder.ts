@@ -21,8 +21,11 @@ import { MethodSubSignatureMap } from '../ir/JsonObjectInterface';
 import { ArkInstanceInvokeExpr, ArkStaticInvokeExpr, ArkPtrInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { StringType, UnknownType, FunctionType, ClassType } from '@ArkAnalyzer/src/core/base/Type';
 import { ArkParameterRef } from '@ArkAnalyzer/src/core/base/Ref';
-import { ArkAssignStmt } from '@ArkAnalyzer/src/core/base/Stmt';
+import { ArkAssignStmt, ArkInvokeStmt } from '@ArkAnalyzer/src/core/base/Stmt';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
+
+
+
 /**
  * 负责重建函数体的类
  */
@@ -37,6 +40,8 @@ export class FunctionBodyRebuilder {
     private callsiteInvokeExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr;
     private callsiteBlock: BasicBlock | null = null; // 调用点所在的BasicBlock
     private callsiteLocalMap: Map<string, Local> = new Map(); // 调用点相关的Local变量映射
+    private convertToStaticInvoke: boolean = false; // 是否将原invokeExpr转换为static invoke
+    private callsiteStmtIndex: number = -1; // 记录调用语句在BasicBlock中的位置
     private static functionNumber: number = 0; // 用于生成唯一的函数编号
 
     private getFunctionNumber(): number {
@@ -56,6 +61,8 @@ export class FunctionBodyRebuilder {
         methodSubSignatureMap: Map<string, MethodSubSignatureMap[]>,
         invokeExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr,
         callsiteBlock?: BasicBlock,
+        convertToStaticInvoke: boolean = false, // 可选功能：是否将原invokeExpr转换为static invoke
+        callsiteStmtIndex: number = -1 // 记录调用语句在BasicBlock中的位置
     ) {
         this.scene = scene;
         this.declaringClass = declaringClass;
@@ -65,6 +72,8 @@ export class FunctionBodyRebuilder {
         this.methodSubSignatureMap = methodSubSignatureMap;
         this.callsiteInvokeExpr = invokeExpr;
         this.callsiteBlock = callsiteBlock || null;
+        this.convertToStaticInvoke = convertToStaticInvoke;
+        this.callsiteStmtIndex = callsiteStmtIndex;
     }
     
     /**
@@ -96,7 +105,12 @@ export class FunctionBodyRebuilder {
         // 6. 构建CFG和函数体
         this.buildFunctionCFG();
         
-        // 7. 将方法添加到场景中
+        // 7. 可选功能：将原invokeExpr转换为static invoke
+        if (this.convertToStaticInvoke) {
+            this.convertInvokeExprToStaticInvoke();
+        }
+        
+        // 8. 将方法添加到场景中
         this.scene.addToMethodsMap(this.functionMethod);
         this.logger.info(`invokeExpr: ${this.callsiteInvokeExpr.toString()}`);
 
@@ -210,16 +224,16 @@ export class FunctionBodyRebuilder {
         // 根据调用类型设置方法签名
         if (this.callsiteInvokeExpr instanceof ArkInstanceInvokeExpr) {
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
-            // let base = this.callsiteInvokeExpr.getBase();
-            // // TODO: 更新base的类型
-            // // base type改为 declaringClass
-            // if (base instanceof Local) {
-            //     // 确保base的类型与declaringClass匹配
-            //     let declaringClassType = new ClassType(this.declaringClass.getSignature(), this.declaringClass.getRealTypes());
+            let base = this.callsiteInvokeExpr.getBase();
+            // TODO: 更新base的类型
+            // base type改为 declaringClass
+            if (base instanceof Local) {
+                // 确保base的类型与declaringClass匹配
+                let declaringClassType = new ClassType(this.declaringClass.getSignature(), this.declaringClass.getRealTypes());
 
-            //     base.setType(declaringClassType);
-            //     this.logger.debug(`Updated base type for ArkInstanceInvokeExpr: ${base.getName()} to ${this.declaringClass.getSignature()}`);
-            // }
+                base.setType(declaringClassType);
+                this.logger.debug(`Updated base type for ArkInstanceInvokeExpr: ${base.getName()} to ${this.declaringClass.getSignature()}`);
+            }
         } else if (this.callsiteInvokeExpr instanceof ArkStaticInvokeExpr) {
             // 对于静态调用，需要更新方法签名
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
@@ -453,4 +467,280 @@ export class FunctionBodyRebuilder {
     public getCallsiteLocalMap(): Map<string, Local> {
         return this.callsiteLocalMap;
     }
+
+    /**
+     * 将原invokeExpr转换为static invoke
+     * 这是一个可选功能，将任何类型的调用（instance invoke、ptr invoke等）转换为static invoke
+     */
+    private convertInvokeExprToStaticInvoke(): void {
+        if (!this.callsiteBlock) {
+            this.logger.warn(`No callsite block available, cannot convert invokeExpr to static invoke`);
+            return;
+        }
+
+        this.logger.info(`Converting ${this.callsiteInvokeExpr.constructor.name} to static invoke`);
+
+        try {
+            // 获取新创建的方法签名
+            const newMethodSignature = this.functionMethod.getImplementationSignature();
+            if (!newMethodSignature) {
+                this.logger.error(`No implementation signature found for the rebuilt method`);
+                return;
+            }
+
+            // 收集原有的参数
+            let originalArgs = this.callsiteInvokeExpr.getArgs();
+            let staticInvokeArgs = [...originalArgs]; // 复制参数数组
+
+            // // 如果原来是instance invoke，需要将base作为第一个参数
+            // if (this.callsiteInvokeExpr instanceof ArkInstanceInvokeExpr) {
+            //     const base = this.callsiteInvokeExpr.getBase();
+            //     staticInvokeArgs = [base, ...originalArgs];
+            //     this.logger.debug(`Added base as first argument for static invoke: ${base.toString()}`);
+            // }
+
+            // 创建新的ArkStaticInvokeExpr
+            const staticInvokeExpr = new ArkStaticInvokeExpr(
+                newMethodSignature,
+                staticInvokeArgs
+            );
+
+            // 在callsiteBlock中找到包含原invokeExpr的语句并替换
+            this.replaceInvokeExprInCallsiteBlock(staticInvokeExpr);
+
+            // 重要：同时更新原始的invokeExpr对象，确保引用也指向新的static invoke
+            this.updateOriginalInvokeExpr(staticInvokeExpr);
+
+            this.logger.info(`Successfully converted to static invoke: ${staticInvokeExpr.toString()}`);
+
+        } catch (error) {
+            this.logger.error(`Failed to convert invokeExpr to static invoke:`, error);
+        }
+    }
+
+    /**
+     * 在调用点BasicBlock中找到并替换invokeExpr
+     */
+    private replaceInvokeExprInCallsiteBlock(newStaticInvokeExpr: ArkStaticInvokeExpr): void {
+        if (!this.callsiteBlock) {
+            this.logger.error(`No callsite block available for replacement`);
+            return;
+        }
+
+        if (this.callsiteStmtIndex < 0) {
+            this.logger.warn(`No valid callsite statement index, cannot replace invokeExpr`);
+            return;
+        }
+
+        const statements = this.callsiteBlock.getStmts();
+        
+        this.logger.debug(`=== REPLACEMENT DEBUG INFO ===`);
+        this.logger.debug(`CallsiteBlock has ${statements.length} statements`);
+        this.logger.debug(`Trying to replace at index: ${this.callsiteStmtIndex}`);
+        this.logger.debug(`Original invokeExpr: ${this.callsiteInvokeExpr.toString()}`);
+        this.logger.debug(`New static invokeExpr: ${newStaticInvokeExpr.toString()}`);
+        
+        if (this.callsiteStmtIndex >= statements.length) {
+            this.logger.error(`Invalid callsite statement index ${this.callsiteStmtIndex}, block has ${statements.length} statements`);
+            return;
+        }
+
+        const stmt = statements[this.callsiteStmtIndex];
+        this.logger.debug(`Target statement at index ${this.callsiteStmtIndex}: ${stmt.toString()}`);
+        this.logger.debug(`Statement type: ${stmt.constructor.name}`);
+
+        try {
+            // 检查语句是否包含invokeExpr
+            if (!stmt.containsInvokeExpr || !stmt.containsInvokeExpr()) {
+                this.logger.error(`Statement at index ${this.callsiteStmtIndex} does not contain invokeExpr`);
+                this.logger.debug(`Statement details: ${stmt.toString()}`);
+                this.logger.debug(`Expected invokeExpr: ${this.callsiteInvokeExpr.toString()}`);
+                return;
+            }
+
+            // 先验证当前语句中的invokeExpr是否匹配我们要替换的invokeExpr
+            const currentInvokeExpr = stmt.getInvokeExpr();
+            if (currentInvokeExpr !== this.callsiteInvokeExpr) {
+                this.logger.warn(`InvokeExpr mismatch! Expected: ${this.callsiteInvokeExpr.toString()}, Found: ${currentInvokeExpr?.toString() || 'null'}`);
+                // 即使不匹配，也尝试继续替换，因为可能是同一个对象的不同引用
+            }
+
+            // 根据语句类型进行替换
+            if (stmt instanceof ArkAssignStmt) {
+                // 对于赋值语句，创建新的赋值语句并尽可能保留原有元信息
+                const newAssignStmt = new ArkAssignStmt(stmt.getLeftOp(), newStaticInvokeExpr);
+                
+                // 保留CFG和其他可能的元信息
+                if (stmt.getCfg()) {
+                    newAssignStmt.setCfg(stmt.getCfg());
+                }
+                
+                // 尝试保留其他元信息（如行号、文件信息等）
+                try {
+                    if ((stmt as any).getLineNumber && typeof (stmt as any).getLineNumber === 'function') {
+                        const lineNumber = (stmt as any).getLineNumber();
+                        if (lineNumber && typeof (newAssignStmt as any).setLineNumber === 'function') {
+                            (newAssignStmt as any).setLineNumber(lineNumber);
+                        }
+                    }
+                    
+                    // 保留其他可能的元数据属性
+                    if ((stmt as any).metadata) {
+                        (newAssignStmt as any).metadata = (stmt as any).metadata;
+                    }
+                } catch (metaError) {
+                    this.logger.debug(`Could not preserve all metadata for ArkAssignStmt: ${metaError}`);
+                }
+                
+                // 直接替换语句
+                statements[this.callsiteStmtIndex] = newAssignStmt;
+                this.logger.info(`Successfully replaced assign statement with static invoke at index ${this.callsiteStmtIndex}`);
+                this.logger.debug(`New statement: ${newAssignStmt.toString()}`);
+            } else if (stmt instanceof ArkInvokeStmt) {
+                // 对于调用语句，直接替换其中的invokeExpr
+                this.logger.debug(`Before replacement - ArkInvokeStmt: ${stmt.toString()}`);
+                stmt.replaceInvokeExpr(newStaticInvokeExpr);
+                this.logger.info(`Successfully replaced invokeExpr in ArkInvokeStmt with static invoke at index ${this.callsiteStmtIndex}`);
+                this.logger.debug(`After replacement - ArkInvokeStmt: ${stmt.toString()}`);
+            } else {
+                // 对于其他类型的语句，尝试直接设置invokeExpr
+                // 大多数包含invokeExpr的语句都应该有setInvokeExpr方法或类似的方式来更新
+                try {
+                    // 尝试通过反射或直接方法调用来设置新的invokeExpr
+                    if (typeof (stmt as any).setInvokeExpr === 'function') {
+                        (stmt as any).setInvokeExpr(newStaticInvokeExpr);
+                        this.logger.info(`Successfully updated invokeExpr in statement at index ${this.callsiteStmtIndex}`);
+                    } else {
+                        this.logger.warn(`Cannot directly replace invokeExpr in statement type: ${stmt.constructor.name} at index ${this.callsiteStmtIndex}`);
+                        this.logger.warn(`Statement may need manual handling for this type`);
+                        
+                        // 作为最后的手段，尝试使用反射方式替换
+                        this.logger.info(`Attempting to use reflection-based replacement for statement type: ${stmt.constructor.name}`);
+                        this.tryReflectionBasedReplacement(stmt, newStaticInvokeExpr);
+                    }
+                } catch (setError) {
+                    this.logger.warn(`Failed to set invokeExpr directly, statement type: ${stmt.constructor.name}`, setError);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`Error replacing statement at index ${this.callsiteStmtIndex}:`, error);
+        }
+    }
+
+    /**
+     * 尝试使用反射方式替换invokeExpr（兜底方案）
+     */
+    private tryReflectionBasedReplacement(stmt: any, newStaticInvokeExpr: ArkStaticInvokeExpr): void {
+        try {
+            // 检查是否有rightOp属性（通常是ArkAssignStmt的右操作数）
+            if (stmt.rightOp && this.isInvokeExpr(stmt.rightOp)) {
+                stmt.rightOp = newStaticInvokeExpr;
+                this.logger.info(`Successfully replaced rightOp invokeExpr using reflection`);
+                return;
+            }
+            
+            // 检查是否有invokeExpr属性（某些语句可能直接有这个属性）
+            if (stmt.invokeExpr && this.isInvokeExpr(stmt.invokeExpr)) {
+                stmt.invokeExpr = newStaticInvokeExpr;
+                this.logger.info(`Successfully replaced invokeExpr property using reflection`);
+                return;
+            }
+            
+            // 检查其他可能的属性名
+            const possibleProps = ['expr', 'expression', 'call', 'invoke'];
+            for (const prop of possibleProps) {
+                if (stmt[prop] && this.isInvokeExpr(stmt[prop])) {
+                    stmt[prop] = newStaticInvokeExpr;
+                    this.logger.info(`Successfully replaced ${prop} property using reflection`);
+                    return;
+                }
+            }
+            
+            this.logger.warn(`Could not find invokeExpr property to replace in statement type: ${stmt.constructor.name}`);
+        } catch (error) {
+            this.logger.error(`Error in reflection-based replacement:`, error);
+        }
+    }
+
+    /**
+     * 判断对象是否是invokeExpr
+     */
+    private isInvokeExpr(obj: any): boolean {
+        return obj instanceof ArkInstanceInvokeExpr ||
+               obj instanceof ArkStaticInvokeExpr ||
+               obj instanceof ArkPtrInvokeExpr;
+    }
+
+    /**
+     * 更新原始invokeExpr对象，确保引用指向新的static invoke
+     * 这解决了替换callsite block中的语句后，原始invokeExpr引用没有更新的问题
+     */
+    private updateOriginalInvokeExpr(newStaticInvokeExpr: ArkStaticInvokeExpr): void {
+        try {
+            // 获取原始invokeExpr的方法签名和参数，然后将它们复制到新的static invoke中
+            const originalInvokeExpr = this.callsiteInvokeExpr;
+            
+            // 由于JavaScript对象是引用传递，我们需要"就地"更新原始对象的属性
+            // 但这对于TypeScript类来说比较复杂，因为类的属性可能是只读的
+            
+            // 一个更安全的方法是更新所有可以更新的属性
+            if (originalInvokeExpr instanceof ArkInstanceInvokeExpr) {
+                // 对于ArkInstanceInvokeExpr，我们需要将其转换为ArkStaticInvokeExpr
+                // 但由于类型不匹配，我们采用"属性复制"的方式
+                this.copyInvokeExprProperties(newStaticInvokeExpr, originalInvokeExpr);
+                this.logger.info(`Updated original ArkInstanceInvokeExpr properties to match static invoke`);
+            } else if (originalInvokeExpr instanceof ArkStaticInvokeExpr) {
+                // 对于已经是static invoke的情况，直接更新属性
+                this.copyInvokeExprProperties(newStaticInvokeExpr, originalInvokeExpr);
+                this.logger.info(`Updated original ArkStaticInvokeExpr properties`);
+            } else if (originalInvokeExpr instanceof ArkPtrInvokeExpr) {
+                // 对于指针调用，也使用属性复制
+                this.copyInvokeExprProperties(newStaticInvokeExpr, originalInvokeExpr);
+                this.logger.info(`Updated original ArkPtrInvokeExpr properties to match static invoke`);
+            }
+            
+        } catch (error) {
+            this.logger.error(`Error updating original invokeExpr:`, error);
+        }
+    }
+
+    /**
+     * 将新invokeExpr的属性复制到原始invokeExpr对象中
+     * 这是一个"就地更新"的尝试，但受限于TypeScript的类型系统
+     */
+    private copyInvokeExprProperties(source: ArkStaticInvokeExpr, target: any): void {
+        try {
+            // 复制方法签名
+            if (typeof target.setMethodSignature === 'function') {
+                target.setMethodSignature(source.getMethodSignature());
+                this.logger.debug(`Copied method signature to original invokeExpr`);
+            }
+            
+            // 复制参数
+            if (typeof target.setArgs === 'function') {
+                target.setArgs(source.getArgs());
+                this.logger.debug(`Copied arguments to original invokeExpr`);
+            }
+            
+            // 尝试更新类型信息
+            if (typeof target.setType === 'function' && typeof source.getType === 'function') {
+                target.setType(source.getType());
+                this.logger.debug(`Copied type to original invokeExpr`);
+            }
+            
+            // 直接设置属性（不推荐，但在某些情况下可能有效）
+            if (target.methodSignature !== undefined) {
+                target.methodSignature = source.getMethodSignature();
+            }
+            if (target.args !== undefined) {
+                target.args = source.getArgs();
+            }
+            
+            this.logger.debug(`Attempted to copy properties from static invoke to original invokeExpr`);
+            
+        } catch (error) {
+            this.logger.warn(`Some properties could not be copied to original invokeExpr:`, error);
+        }
+    }
+
 }

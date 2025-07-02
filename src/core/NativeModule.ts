@@ -331,12 +331,11 @@ export class NativeModule {
     }
 
     /**
-     * 重建指定函数的方法体（使用CallDetailInfo）
+     * 重建指定函数的方法体（使用包含签名的CallDetailInfo）
      */
     public rebuildFunctionBodyWithCallDetail(
         functionName: string, 
-        callDetail: CallDetailInfo,
-        methodSubSignature?: MethodSubSignatureMap[]
+        callDetail: CallDetailInfo
     ): ArkMethod | null {
         // 查找对应的IR函数
         const irFunction = this.irModule.getFunctionByName(functionName);
@@ -349,16 +348,17 @@ export class NativeModule {
         const copyIrFunction = irFunction.copy();
         logger.info(`Found irFunction: ${copyIrFunction.getName()} in module: ${this.irModule.getModuleName()}`);
         
-        // 处理 methodSubSignature，如果没有提供则使用空数组或默认值
-        const effectiveMethodSubSignature = methodSubSignature || [];
-        if (!methodSubSignature) {
-            logger.info(`No methodSubSignature provided for function: ${functionName}, using default empty signature`);
-        }
-        
-        // 创建一个临时的 Map 来传递给 FunctionBodyRebuilder
-        const tempMethodSubSignatureMap = new Map<string, MethodSubSignatureMap[]>();
-        if (effectiveMethodSubSignature.length > 0) {
-            tempMethodSubSignatureMap.set(this.irModule.getModuleName(), effectiveMethodSubSignature);
+        // 使用CallDetail中的methodSignature
+        let tempMethodSubSignatureMap = new Map<string, MethodSubSignatureMap[]>();
+        if (callDetail.methodSignature) {
+            const methodSubSignatureMap: MethodSubSignatureMap = {
+                name: callDetail.methodSignature.getMethodName(),
+                methodSubSignature: callDetail.methodSignature
+            };
+            tempMethodSubSignatureMap.set(this.irModule.getModuleName(), [methodSubSignatureMap]);
+            logger.info(`Using method signature from CallDetail for function: ${functionName}`);
+        } else {
+            logger.info(`No method signature in CallDetail for function: ${functionName}, using empty signature`);
         }
         
         // 使用CallDetail中的callsiteBlock
@@ -372,7 +372,9 @@ export class NativeModule {
             copyIrFunction, 
             tempMethodSubSignatureMap, 
             callDetail.invokeExpr,
-            callsiteBlock  // 使用CallDetail中的callsiteBlock
+            callsiteBlock,  // 使用CallDetail中的callsiteBlock
+            true,  // 启用转换为static invoke的功能
+            callDetail.callsiteStmtIndex || -1  // 传递语句索引
         );
         
         // 重建函数体
@@ -390,23 +392,14 @@ export class NativeModule {
     }
 
     /**
-     * 批量重建多个函数的方法体（使用CallDetailInfo数组）
+     * 批量重建多个函数的方法体（使用包含签名的CallDetailInfo数组）
      */
     public rebuildMultipleFunctionsWithCallDetails(
-        callDetails: CallDetailInfo[],
-        methodSubSignatureMap: Map<string, MethodSubSignatureMap[]>
+        callDetails: CallDetailInfo[]
     ): ArkMethod[] {
         const rebuiltMethods: ArkMethod[] = [];
 
-        // 从全局 map 中获取当前模块对应的 methodSubSignature
-        const moduleName = this.irModule.getModuleName();
-        const moduleMethodSubSignature = methodSubSignatureMap.get(moduleName);
-        
-        if (!moduleMethodSubSignature) {
-            logger.warn(`No methodSubSignature found for module: ${moduleName}, will use empty signature`);
-        } else {
-            logger.info(`Found methodSubSignature for module: ${moduleName} with ${moduleMethodSubSignature.length} entries`);
-        }
+        logger.info(`Starting to rebuild functions for module ${this.irModule.getModuleName()} with ${callDetails.length} call details`);
 
         for (const callDetail of callDetails) {
             // 获取调用表达式的方法名，优先使用CallDetail中的functionName
@@ -459,8 +452,8 @@ export class NativeModule {
                 continue;
             }
 
-            // 调用重建方法，传递对应的 signature 数组（如果存在的话）
-            const rebuiltMethod = this.rebuildFunctionBodyWithCallDetail(functionName, callDetail, moduleMethodSubSignature);
+            // 调用重建方法，使用CallDetail中包含的方法签名
+            const rebuiltMethod = this.rebuildFunctionBodyWithCallDetail(functionName, callDetail);
             if (rebuiltMethod) {
                 rebuiltMethods.push(rebuiltMethod);
             }

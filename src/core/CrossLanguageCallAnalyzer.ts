@@ -2,8 +2,10 @@ import { Scene } from '@ArkAnalyzer/src/Scene';
 import { ArkFile } from '@ArkAnalyzer/src/core/model/ArkFile';
 import { ArkBody, ArkInstanceInvokeExpr, ArkStaticInvokeExpr, ArkPtrInvokeExpr, ModelUtils } from '@ArkAnalyzer/src';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
+import { MethodSubSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import ConsoleLogger from '@ArkAnalyzer/src/utils/logger';
 import { LOG_MODULE_TYPE } from '@ArkAnalyzer/src/utils/logger';
+import { MethodSubSignatureMap } from '../ir/JsonObjectInterface';
 
 const logger = ConsoleLogger.getLogger(LOG_MODULE_TYPE.TOOL, 'CrossLanguageCallAnalyzer');
 
@@ -16,12 +18,14 @@ export interface CrossLanguageCallInfo {
 }
 
 /**
- * 调用详细信息（包含调用表达式和所在BasicBlock）
+ * 调用详细信息（包含调用表达式、所在BasicBlock和方法签名）
  */
 export interface CallDetailInfo {
     invokeExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr;
     callsiteBlock: BasicBlock | null;
     functionName?: string; // 函数名（对于具名导入）
+    methodSignature?: MethodSubSignature; // 从.d.ts提取的方法签名（已在分析阶段匹配好）
+    callsiteStmtIndex?: number; // 调用语句在BasicBlock中的位置索引
 }
 
 /**
@@ -43,9 +47,23 @@ export class CrossLanguageCallAnalyzer {
     private namedImportMap: Map<string, string> = new Map(); // 具名导入映射：函数名 -> 库名
     private dynamicImportMap: Map<string, string> = new Map(); // 动态导入映射：变量名 -> 库名
     private napiCallDetailsMap: Map<string, CallDetailInfo[]> = new Map(); // 新的调用详情映射
+    private methodSubSignatureMap: Map<string, MethodSubSignature> = new Map(); // 方法签名映射：函数名 -> 签名
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, methodSubSignatureMapsByLibrary?: Map<string, MethodSubSignatureMap[]>) {
         this.scene = scene;
+        // 初始化方法签名映射
+        if (methodSubSignatureMapsByLibrary) {
+            for (const [libraryName, methodSubSignatureMapArray] of methodSubSignatureMapsByLibrary) {
+                for (const methodSubSignatureMap of methodSubSignatureMapArray) {
+                    // 使用库名前缀来区分不同库的函数
+                    const qualifiedName = `${libraryName}.${methodSubSignatureMap.name}`;
+                    this.methodSubSignatureMap.set(qualifiedName, methodSubSignatureMap.methodSubSignature);
+                    // 同时添加不带库名前缀的版本，用于直接匹配
+                    this.methodSubSignatureMap.set(methodSubSignatureMap.name, methodSubSignatureMap.methodSubSignature);
+                }
+            }
+            logger.info(`Loaded ${this.methodSubSignatureMap.size} method signatures from .d.ts files across ${methodSubSignatureMapsByLibrary.size} libraries`);
+        }
     }
 
     /**
@@ -186,22 +204,24 @@ export class CrossLanguageCallAnalyzer {
         
         // 首先遍历所有BasicBlock
         for (const basicBlock of cfg.getBlocks()) {
-            // 遍历BasicBlock中的所有语句
-            for (const threeAddressStmt of basicBlock.getStmts()) {
+            // 遍历BasicBlock中的所有语句，同时记录索引
+            const statements = basicBlock.getStmts();
+            for (let stmtIndex = 0; stmtIndex < statements.length; stmtIndex++) {
+                const threeAddressStmt = statements[stmtIndex];
                 if (threeAddressStmt.containsInvokeExpr()) {
                     const invokeExpr = threeAddressStmt.getInvokeExpr();
                     
                     // 处理实例调用（这些可能是node-api的调用，但被错误识别）
                     if (invokeExpr instanceof ArkInstanceInvokeExpr) {
-                        this.processInstanceInvokeExpr(invokeExpr, importMap, basicBlock);
+                        this.processInstanceInvokeExpr(invokeExpr, importMap, basicBlock, stmtIndex);
                     }
                     // 处理静态调用（这是node-api的正确调用方式）
                     else if (invokeExpr instanceof ArkStaticInvokeExpr) {
-                        this.processStaticInvokeExpr(invokeExpr, basicBlock);
+                        this.processStaticInvokeExpr(invokeExpr, basicBlock, stmtIndex);
                     }
                     // 处理指针调用（具名导入的函数调用）
                     else if (invokeExpr instanceof ArkPtrInvokeExpr) {
-                        this.processPtrInvokeExpr(invokeExpr, basicBlock);
+                        this.processPtrInvokeExpr(invokeExpr, basicBlock, stmtIndex);
                     }
                 }
             }
@@ -211,7 +231,7 @@ export class CrossLanguageCallAnalyzer {
     /**
      * 处理实例调用表达式
      */
-    private processInstanceInvokeExpr(invokeExpr: ArkInstanceInvokeExpr, importMap: Map<string, string>, callsiteBlock: BasicBlock): void {
+    private processInstanceInvokeExpr(invokeExpr: ArkInstanceInvokeExpr, importMap: Map<string, string>, callsiteBlock: BasicBlock, stmtIndex: number): void {
         logger.info(`Instance invokeExpr: ${invokeExpr.toString()}`);
         const base = invokeExpr.getBase();
         const basename = base.getName();
@@ -244,14 +264,14 @@ export class CrossLanguageCallAnalyzer {
         }
 
         if (importFrom) {
-            this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, methodName);
+            this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, methodName, stmtIndex);
         }
     }
 
     /**
      * 处理静态调用表达式
      */
-    private processStaticInvokeExpr(invokeExpr: ArkStaticInvokeExpr, callsiteBlock: BasicBlock): void {
+    private processStaticInvokeExpr(invokeExpr: ArkStaticInvokeExpr, callsiteBlock: BasicBlock, stmtIndex: number): void {
         logger.info(`Static invokeExpr: ${invokeExpr.toString()}`);
         const methodSignature = invokeExpr.getMethodSignature();
         const methodName = methodSignature.getMethodSubSignature().getMethodName();
@@ -265,7 +285,7 @@ export class CrossLanguageCallAnalyzer {
             logger.info(`Named import static call: ${methodName} from ${importFrom}`);
             
             if (importFrom) {
-                this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, methodName);
+                this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, methodName, stmtIndex);
             }
         }
         // 检查是否为全局函数调用（如 loadNativeModule）
@@ -281,7 +301,7 @@ export class CrossLanguageCallAnalyzer {
     /**
      * 处理指针调用表达式（具名导入的函数调用）
      */
-    private processPtrInvokeExpr(invokeExpr: ArkPtrInvokeExpr, callsiteBlock: BasicBlock): void {
+    private processPtrInvokeExpr(invokeExpr: ArkPtrInvokeExpr, callsiteBlock: BasicBlock, stmtIndex: number): void {
         logger.info(`Ptr invokeExpr: ${invokeExpr.toString()}`);
         
         // 尝试从调用表达式中获取函数名
@@ -311,7 +331,7 @@ export class CrossLanguageCallAnalyzer {
             logger.info(`Named import ptr call: ${functionName} from ${importFrom}`);
             
             if (importFrom) {
-                this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, functionName);
+                this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, functionName, stmtIndex);
             }
         } else {
             logger.debug(`Ptr call ${functionName} not found in named imports`);
@@ -319,14 +339,45 @@ export class CrossLanguageCallAnalyzer {
     }
 
     /**
-     * 添加NAPI调用详情到映射中（包含调用点BasicBlock）
+     * 添加NAPI调用详情到映射中（包含调用点BasicBlock和方法签名）
      */
-    private addNapiCallDetail(importFrom: string, invokeExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr, callsiteBlock: BasicBlock | null, functionName?: string): void {
+    private addNapiCallDetail(importFrom: string, invokeExpr: ArkInstanceInvokeExpr | ArkStaticInvokeExpr | ArkPtrInvokeExpr, callsiteBlock: BasicBlock | null, functionName?: string, stmtIndex?: number): void {
+        // 尝试匹配方法签名
+        let methodSignature: MethodSubSignature | undefined;
+        if (functionName) {
+            // 从库名中提取文件夹名
+            const libNameWithoutExtension = importFrom.replace(/\.(so|dll)$/, '').replace(/^lib/, '');
+            
+            // 尝试多种匹配策略
+            const possibleKeys = [
+                `${libNameWithoutExtension}.@nodeapiFunction${functionName}`, // 库名.@nodeapiFunction函数名
+                `@nodeapiFunction${functionName}`, // @nodeapiFunction函数名
+                `${libNameWithoutExtension}.${functionName}`, // 库名.函数名
+                functionName // 直接函数名
+            ];
+            
+            for (const key of possibleKeys) {
+                methodSignature = this.methodSubSignatureMap.get(key);
+                if (methodSignature) {
+                    logger.info(`Found method signature for function '${functionName}' using key '${key}': ${methodSignature.toString()}`);
+                    break;
+                }
+            }
+            
+            if (!methodSignature) {
+                logger.warn(`No method signature found for function '${functionName}' in library '${importFrom}'. Tried keys: ${possibleKeys.join(', ')}`);
+                // 打印可用的签名，用于调试
+                logger.debug(`Available signatures: ${Array.from(this.methodSubSignatureMap.keys()).join(', ')}`);
+            }
+        }
+        
         const existingDetails = this.napiCallDetailsMap.get(importFrom) || [];
         existingDetails.push({
             invokeExpr,
             callsiteBlock,
-            functionName
+            functionName,
+            methodSignature,
+            callsiteStmtIndex: stmtIndex
         });
         this.napiCallDetailsMap.set(importFrom, existingDetails);
     }
@@ -398,7 +449,7 @@ export class CrossLanguageCallAnalyzer {
     /**
      * 处理动态方法调用
      */
-    private processDynamicMethodCall(invokeExpr: ArkInstanceInvokeExpr, callsiteBlock: BasicBlock): void {
+    private processDynamicMethodCall(invokeExpr: ArkInstanceInvokeExpr, callsiteBlock: BasicBlock, stmtIndex: number = -1): void {
         const base = invokeExpr.getBase();
         const basename = base.getName();
         const methodName = invokeExpr.getMethodSignature().getMethodSubSignature().getMethodName();
@@ -409,7 +460,7 @@ export class CrossLanguageCallAnalyzer {
             logger.info(`Dynamic module method call: ${basename}.${methodName} from ${importFrom}`);
             
             if (importFrom) {
-                this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, methodName);
+                this.addNapiCallDetail(importFrom, invokeExpr, callsiteBlock, methodName, stmtIndex);
             }
         }
     }
