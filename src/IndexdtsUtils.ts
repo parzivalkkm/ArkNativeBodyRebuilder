@@ -66,7 +66,12 @@ export class IndexdtsUtils {
                     const methodSubSignature = methodSignature.getMethodSubSignature();
                     this.logger.info(`Method Sub Signature: ${methodSubSignature}`);
                     // 创建一个新的methodsubsignature
-                    const newMethodSubSignature = new MethodSubSignature("@nodeapiFunction" + name, methodSubSignature.getParameters(), methodSubSignature.getReturnType(), methodSubSignature.isStatic());
+                    const newMethodSubSignature = new MethodSubSignature(
+                        "@nodeapiFunction" + name,
+                        methodSubSignature.getParameters(),
+                        methodSubSignature.getReturnType(),
+                        true  // methodSubSignature.isStatic() // 这里其实应该写成static
+                    );
                     // 创建一个新的methodsubsignaturemap
                     const newMethodSubSignatureMap: MethodSubSignatureMap = {
                         name: "@nodeapiFunction" + name,
