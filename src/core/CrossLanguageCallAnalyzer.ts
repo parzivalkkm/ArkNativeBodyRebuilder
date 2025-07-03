@@ -6,6 +6,9 @@ import { MethodSubSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import ConsoleLogger from '@ArkAnalyzer/src/utils/logger';
 import { LOG_MODULE_TYPE } from '@ArkAnalyzer/src/utils/logger';
 import { MethodSubSignatureMap } from '../ir/JsonObjectInterface';
+import { ArkAssignStmt } from '@ArkAnalyzer/src/core/base/Stmt';
+import { Value } from '@ArkAnalyzer/src/core/base/Value';
+import { Local } from '@ArkAnalyzer/src/core/base/Local';
 
 const logger = ConsoleLogger.getLogger(LOG_MODULE_TYPE.TOOL, 'CrossLanguageCallAnalyzer');
 
@@ -116,6 +119,7 @@ export class CrossLanguageCallAnalyzer {
         }
         
         // 如果有导入映射，分析调用
+        // 需要单独处理dynamicImportMap
         if (importMap.size > 0 || this.namedImportMap.size > 0) {
             this.analyzeFileCalls(arkFile, importMap);
         }
@@ -409,12 +413,15 @@ export class CrossLanguageCallAnalyzer {
         
         // 第二步：查找动态模块上的方法调用
         for (const basicBlock of cfg.getBlocks()) {
-            for (const threeAddressStmt of basicBlock.getStmts()) {
+            const statements = basicBlock.getStmts();
+            for (let stmtIndex = 0; stmtIndex < statements.length; stmtIndex++) {
+                const threeAddressStmt = statements[stmtIndex];
                 if (threeAddressStmt.containsInvokeExpr()) {
                     const invokeExpr = threeAddressStmt.getInvokeExpr();
                     
                     if (invokeExpr instanceof ArkInstanceInvokeExpr) {
-                        this.processDynamicMethodCall(invokeExpr, basicBlock);
+                        // 需要处理originalText
+                        this.processDynamicMethodCall(invokeExpr, basicBlock, threeAddressStmt, stmtIndex);
                     }
                 }
             }
@@ -449,10 +456,30 @@ export class CrossLanguageCallAnalyzer {
     /**
      * 处理动态方法调用
      */
-    private processDynamicMethodCall(invokeExpr: ArkInstanceInvokeExpr, callsiteBlock: BasicBlock, stmtIndex: number = -1): void {
+    private processDynamicMethodCall(invokeExpr: ArkInstanceInvokeExpr, callsiteBlock: BasicBlock, threeAddressStmt: any, stmtIndex: number = -1): void {
         const base = invokeExpr.getBase();
-        const basename = base.getName();
-        const methodName = invokeExpr.getMethodSignature().getMethodSubSignature().getMethodName();
+        let basename = base.getName();
+        let methodName = invokeExpr.getMethodSignature().getMethodSubSignature().getMethodName();
+        
+        // 如果methodName以%AM开头，说明没有正确解析调用的函数，需要从originalText中提取
+        if (methodName.startsWith('%AM')) {
+            const originalText = threeAddressStmt.originalText;
+            if (originalText) {
+                // 匹配形如 "let info = JSON.stringify(...)" 或 "testEntry.proxy(...)" 或 "dynamicModule.leak(...)" 的调用
+                const callMatch = originalText.match(/(?:let|const|var)?\s*\w+\s*=\s*(\w+)\.(\w+)\(|(\w+)\.(\w+)\(/);
+                if (callMatch) {
+                    // 根据匹配结果的位置来确定basename和methodName
+                    // 如果是赋值语句形式，使用第1和第2个捕获组
+                    // 如果是直接调用形式，使用第3和第4个捕获组
+                    methodName = callMatch[2] || callMatch[4];
+                    logger.info(`Extracted from originalText - basename: ${basename}, methodName: ${methodName}`);
+                } else {
+                    logger.warn(`Failed to extract basename and methodName from originalText: ${originalText}`);
+                }
+            } else {
+                logger.warn('No originalText found in threeAddressStmt');
+            }
+        }
         
         // 检查是否为动态导入的模块变量
         if (this.dynamicImportMap.has(basename)) {
@@ -486,16 +513,13 @@ export class CrossLanguageCallAnalyzer {
      * 查找被赋值的变量名
      */
     private findAssignedVariable(stmt: any): string | null {
-        // 这里需要根据具体的语句结构来查找赋值的左侧变量
-        // 这是一个简化版本，实际实现可能需要更复杂的AST遍历
-        const stmtString = stmt.toString();
-        
-        // 查找形如 "var = " 的模式
-        const assignMatch = stmtString.match(/(\w+)\s*=/);
-        if (assignMatch && assignMatch[1]) {
-            return assignMatch[1];
+        // Check if the statement is an ArkAssignStmt
+        if (stmt instanceof ArkAssignStmt) {
+            const leftOp = stmt.getLeftOp();
+            if (leftOp && leftOp instanceof Local) {
+                return leftOp.getName();
+            }
         }
-        
         return null;
     }
 

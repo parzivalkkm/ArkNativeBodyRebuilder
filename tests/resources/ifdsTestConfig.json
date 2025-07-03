@@ -1,6 +1,6 @@
 {
     "targetProjectName": "TaintTest",    
-    "targetProjectDirectory": "D:\\workdir\\HUAWEI\\hormonyos\\code\\HarmonyNativeFlowBench\\native_clean",
+    "targetProjectDirectory": "D:\\workdir\\HUAWEI\\hormonyos\\code\\HarmonyNativeFlowBench\\native_multilib",
 
     "logPath": "out/ArkAnalyzer.log",
     "logLevel": "DEBUG",
