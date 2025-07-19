@@ -1,29 +1,30 @@
-import { ValueType } from './ValueType';
 import { Value } from '@ArkAnalyzer/src/core/base/Value';
+import { Type, UnknownType, NumberType, StringType, AnyType } from '@ArkAnalyzer/src/core/base/Type';
+import { NullConstant, NumberConstant, StringConstant } from '@ArkAnalyzer/src/core/base/Constant';
 
 /**
  * 表示IR中的值的基类
  */
 export abstract class IRValue {
     protected name: string;
-    protected valueType: ValueType;
+    protected type: Type;
     protected arktsValue: Value | null = null;
 
-    constructor(name: string, valueType: ValueType = ValueType.UnInferred) {
+    constructor(name: string, type: Type = UnknownType.getInstance()) {
         this.name = name;
-        this.valueType = valueType;
+        this.type = type;
     }
 
     public getName(): string {
         return this.name;
     }
 
-    public getValueType(): ValueType {
-        return this.valueType;
+    public getType(): Type {
+        return this.type;
     }
 
-    public setValueType(valueType: ValueType): void {
-        this.valueType = valueType;
+    public setType(type: Type): void {
+        this.type = type;
     }
 
     public setArktsValue(value: Value): void {
@@ -42,8 +43,8 @@ export abstract class IRValue {
  * 表示IR中的变量
  */
 export class IRVariable extends IRValue {
-    constructor(name: string, valueType: ValueType = ValueType.UnInferred) {
-        super(name, valueType);
+    constructor(name: string, type: Type = UnknownType.getInstance()) {
+        super(name, type);
     }
 
     public isConstant(): boolean {
@@ -61,8 +62,8 @@ export class IRVariable extends IRValue {
 export class IRParameter extends IRVariable {
     private parameterType: string;
 
-    constructor(name: string, parameterType: string, valueType: ValueType = ValueType.UnInferred) {
-        super(name, valueType);
+    constructor(name: string, parameterType: string, type: Type = UnknownType.getInstance()) {
+        super(name, type);
         this.parameterType = parameterType;
     }
 
@@ -75,8 +76,8 @@ export class IRParameter extends IRVariable {
  * 表示IR中的常量的基类
  */
 export abstract class IRConstant extends IRValue {
-    constructor(name: string, valueType: ValueType) {
-        super(name, valueType);
+    constructor(name: string, type: Type) {
+        super(name, type);
     }
 
     public isConstant(): boolean {
@@ -91,7 +92,7 @@ export class IRNumberConstant extends IRConstant {
     private value: number;
 
     constructor(value: number) {
-        super(`long ${value}`, ValueType.Number);
+        super(`long ${value}`, NumberType.getInstance());
         this.value = value;
     }
 
@@ -119,7 +120,7 @@ export class IRStringConstant extends IRConstant {
     private value: string;
 
     constructor(value: string) {
-        super(`char* "${value}"`, ValueType.String);
+        super(`char* "${value}"`, StringType.getInstance());
         this.value = value;
     }
 
@@ -145,7 +146,7 @@ export class IRStringConstant extends IRConstant {
  */
 export class IRNullConstant extends IRConstant {
     constructor() {
-        super('null', ValueType.Null);
+        super('null', UnknownType.getInstance()); // Null 类型用 UnknownType 表示
     }
 
     public toString(): string {
@@ -158,7 +159,7 @@ export class IRNullConstant extends IRConstant {
  */
 export class IRTopConstant extends IRConstant {
     constructor() {
-        super('top', ValueType.Any);
+        super('top', AnyType.getInstance());
     }
 
     public toString(): string {
@@ -222,15 +223,32 @@ export class IRValueFactory {
      * 创建函数参数
      * @param name 参数名
      * @param parameterType 参数类型
+     * @param type 类型（可选）
      * @returns 参数对象
      */
-    public static createParameter(name: string, parameterType: string): IRParameter {
+    public static createParameter(name: string, parameterType: string, type?: Type): IRParameter {
         if (this.valueCache.has(name)) {
             return this.valueCache.get(name) as IRParameter;
         }
 
-        const parameter = new IRParameter(name, parameterType);
+        const parameter = new IRParameter(name, parameterType, type);
         this.valueCache.set(name, parameter);
         return parameter;
+    }
+
+    /**
+     * 创建变量
+     * @param name 变量名
+     * @param type 类型（可选）
+     * @returns 变量对象
+     */
+    public static createVariable(name: string, type?: Type): IRVariable {
+        if (this.valueCache.has(name)) {
+            return this.valueCache.get(name) as IRVariable;
+        }
+
+        const variable = new IRVariable(name, type);
+        this.valueCache.set(name, variable);
+        return variable;
     }
 }

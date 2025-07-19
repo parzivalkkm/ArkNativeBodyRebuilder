@@ -1,7 +1,7 @@
 import { IRInstruction, IRInstructionFactory, IRCallInstruction, IRReturnInstruction, IRPhiInstruction } from './IRInstruction';
 import { IRValue, IRVariable, IRParameter, IRValueFactory } from './IRValue';
 import { FunctionIR, ModuleIR } from './JsonObjectInterface';
-import { ValueType } from './ValueType';
+import { Type } from '@ArkAnalyzer/src/core/base/Type';
 
 /**
  * 表示一个IR函数
@@ -52,10 +52,10 @@ export class IRFunction {
         return this.valueMap;
     }
     
-    public setValueType(name: string, type: ValueType): void {
+    public setValueType(name: string, type: Type): void {
         const value = this.valueMap.get(name);
         if (value) {
-            value.setValueType(type);
+            value.setType(type);
         }
     }
     
@@ -145,7 +145,7 @@ export class IRFunction {
         
         // 拷贝真正参数
         this.realArgs.forEach(arg => {
-            const copiedArg = new IRVariable(arg.getName(), arg.getValueType());
+            const copiedArg = new IRVariable(arg.getName(), arg.getType());
             copiedFunction.addRealArg(copiedArg);
         });
         
@@ -206,13 +206,13 @@ export class IRFunction {
      */
     private copyIRValue(value: IRValue): IRValue {
         if (value instanceof IRParameter) {
-            const copied = new IRParameter(value.getName(), value.getParameterType(), value.getValueType());
+            const copied = new IRParameter(value.getName(), value.getParameterType(), value.getType());
             if (value.getArktsValue()) {
                 copied.setArktsValue(value.getArktsValue()!);
             }
             return copied;
         } else if (value instanceof IRVariable) {
-            const copied = new IRVariable(value.getName(), value.getValueType());
+            const copied = new IRVariable(value.getName(), value.getType());
             if (value.getArktsValue()) {
                 copied.setArktsValue(value.getArktsValue()!);
             }

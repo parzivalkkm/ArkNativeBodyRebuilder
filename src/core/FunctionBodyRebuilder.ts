@@ -11,7 +11,7 @@ import { Scene } from '@ArkAnalyzer/src/Scene';
 import { MethodSignature, MethodSubSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import { ArkSignatureBuilder } from '@ArkAnalyzer/src/core/model/builder/ArkSignatureBuilder';
 import { checkAndUpdateMethod } from '@ArkAnalyzer/src/core/model/builder/ArkMethodBuilder';
-import { TypeInference } from './TypeInference';
+import { SafeTypeInference } from './SafeTypeInference';
 import { CFGBuilder } from './CFGBuilder';
 
 import { LOG_MODULE_TYPE } from '@ArkAnalyzer/src/utils/logger';
@@ -92,7 +92,7 @@ export class FunctionBodyRebuilder {
         this.logger.debug(`Extracted ${realArgs.length} real arguments`);
         
         // 3. 进行类型推断
-        const typeInference = new TypeInference(this.irFunction, this.logger);
+        const typeInference = new SafeTypeInference(this.irFunction, this.logger);
         typeInference.inferTypes();
         this.logger.debug(`Type inference completed`);
         
@@ -364,7 +364,7 @@ export class FunctionBodyRebuilder {
         // 打印真正参数
         this.logger.info(`Real Arguments:`);
         this.irFunction.getRealArgs().forEach((arg, index) => {
-            this.logger.info(`  ${index + 1}: ${arg.getName()} (${arg.getValueType()})`);
+            this.logger.info(`  ${index + 1}: ${arg.getName()} (${arg.getType().toString()})`);
         });
         
         // 打印指令
@@ -376,7 +376,7 @@ export class FunctionBodyRebuilder {
         // 打印值类型
         this.logger.info(`Value Types:`);
         for (const [name, value] of this.irFunction.getAllValues()) {
-            this.logger.info(`  ${name}: ${value.getValueType()}`);
+            this.logger.info(`  ${name}: ${value.getType().toString()}`);
         }
     }
     

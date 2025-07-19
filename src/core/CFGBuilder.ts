@@ -1,7 +1,6 @@
 import { IRFunction } from '../ir/IRFunction';
 import { IRCallInstruction, IRPhiInstruction, IRReturnInstruction } from '../ir/IRInstruction';
 import { IRValue, IRVariable, IRStringConstant, IRNumberConstant, IRNullConstant, IRTopConstant } from '../ir/IRValue';
-import { ValueType } from '../ir/ValueType';
 import { Logger } from 'log4js';
 import { ArkMethod } from '@ArkAnalyzer/src/core/model/ArkMethod';
 import { Local } from '@ArkAnalyzer/src/core/base/Local';
@@ -107,7 +106,7 @@ export class CFGBuilder {
             // 否则使用提取的真正参数
             realArgs.forEach((arg, index) => {
                 // 为每个真正参数创建对应的Local
-                const argType = this.mapValueTypeToArkType(arg.getValueType());
+                const argType = arg.getType();
                 const paramLocal = new Local(arg.getName(), argType);
                 this.varLocalMap.set(arg.getName(), paramLocal);
                 // 记录参数索引
@@ -1695,7 +1694,7 @@ export class CFGBuilder {
         }
         
         // 创建结果Local
-        const resultType = this.mapValueTypeToArkType(result.getValueType());
+        const resultType = result.getType();
         const resultLocal = new Local(result.getName(), resultType);
         
         // 创建赋值语句
@@ -1779,7 +1778,7 @@ export class CFGBuilder {
             }
         } else {
             // 处理变量，创建新的Local
-            const varType = this.mapValueTypeToArkType(value.getValueType());
+            const varType = value.getType();
             const local = new Local(value.getName(), varType);
             
             newValue = local;
@@ -1794,40 +1793,11 @@ export class CFGBuilder {
         
         return newValue;
     }
-      /**
-     * 将ValueType映射到ArkType
-     */
-    private mapValueTypeToArkType(valueType: ValueType): Type {
-        switch (valueType) {
-            case ValueType.Number:
-                return NumberType.getInstance();
-            case ValueType.String:
-                return StringType.getInstance();
-            case ValueType.Boolean:
-                return BooleanType.getInstance();
-            case ValueType.Array:
-                return new ArrayType(AnyType.getInstance(), 1); // TODO: 数组类型的维度和元素类型可能需要更复杂的处理            case ValueType.Object:
-                // 修复：对于Object类型，需要创建正确的ClassType而不是StringType
-                // 尝试从调用上下文推断正确的类型
-                console.log("【CFGBuilder调试】正在处理ValueType.Object，调用inferObjectClassType");
-                const inferredType = this.inferObjectClassType(valueType);
-                console.log(`【CFGBuilder调试】推断出的对象类型: ${inferredType}`);
-                return inferredType;
-            case ValueType.Any:
-                return AnyType.getInstance();
-            case ValueType.Undefined:
-                return UnknownType.getInstance(); // 使用UnknownType表示undefined
-            case ValueType.Null:
-                return UnknownType.getInstance(); // 使用UnknownType表示null
-            default:
-                // 对于其他类型，返回UnknownType而不是StringType                this.logger.warn(`Unsupported value type: ${valueType}, using UnknownType`);
-                return UnknownType.getInstance();
-        }
-    }    /**
+    /**
      * 推断Object类型的正确ClassType
      * 根据调用上下文和参数信息推断对象的实际类型
      */
-    private inferObjectClassType(valueType: ValueType): Type {
+    private inferObjectClassType(): Type {
         console.log("【inferObjectClassType调试】开始推断对象类型");
         
         // 尝试从调用上下文推断对象类型
@@ -1872,7 +1842,7 @@ export class CFGBuilder {
         const objectType = new ClassType(classSignature, undefined);
         
         console.log(`【inferObjectClassType调试】使用通用Object类型: ${classSignature}`);
-        this.logger.debug(`Using generic Object type for ValueType.Object: ${classSignature}`);
+        this.logger.debug(`Using generic Object type for Object: ${classSignature}`);
         return objectType;
     }
 
