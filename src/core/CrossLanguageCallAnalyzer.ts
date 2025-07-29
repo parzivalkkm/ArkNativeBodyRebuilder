@@ -112,6 +112,21 @@ export class CrossLanguageCallAnalyzer {
                     nameBeforeAs,
                     from: strImportFrom
                 }, importMap);
+            }else if (importInfo.getFrom()?.endsWith('.so&')) {
+                // 处理Hapler生成的import中的导入
+                logger.info(`ImportInfo: ${importInfo.toString()}`);
+                const importType = importInfo.getImportType();
+                const strImportFrom = importInfo.getFrom()?.split('&&&')[1].split('.so&')[0] || '';
+                const importClauseName = importInfo.getImportClauseName();
+                const nameBeforeAs = importInfo.getNameBeforeAs();
+                
+                // 处理不同类型的导入
+                this.processImportInfo({
+                    importType,
+                    importClauseName,
+                    nameBeforeAs,
+                    from: strImportFrom
+                }, importMap);
             }
         }
         

@@ -37,14 +37,15 @@ export class NativeModule {
      * 创建ArkFile
      */
     private createArkFile(): ArkFile {
-        const moduleFile = new ArkFile(Language.TYPESCRIPT);
+        const moduleFile = new ArkFile(Language.ARKTS1_1);
         moduleFile.setScene(this.scene);
         
         const moduleFileSignature = new FileSignature(
             this.scene.getProjectName(),
             `@nodeapiFile${this.irModule.getModuleName()}`
         );
-        
+    
+
         moduleFile.setFileSignature(moduleFileSignature);
         this.scene.setFile(moduleFile);
         
@@ -56,7 +57,7 @@ export class NativeModule {
      * 创建ArkClass
      */
     private createArkClass(): ArkClass {
-        const moduleClass = new ArkClass();
+        let moduleClass = new ArkClass();
         moduleClass.setDeclaringArkFile(this.arkFile);
         
         const moduleClassSignature = new ClassSignature(
@@ -67,6 +68,7 @@ export class NativeModule {
         
         moduleClass.setSignature(moduleClassSignature);
         this.arkFile.addArkClass(moduleClass);
+        this.arkFile.setDefaultClass(moduleClass);
         
         logger.info(`Created ArkClass for module: ${this.irModule.getModuleName()}`);
         return moduleClass;

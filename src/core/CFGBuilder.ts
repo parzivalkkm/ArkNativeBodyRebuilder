@@ -1582,7 +1582,7 @@ export class CFGBuilder {
         const param4 = new MethodParameter();
         param4.setName('args');
         param4.setType(new ArrayType(AnyType.getInstance(),1));
-        param4.setDotDotDotToken(true);
+        param4.setRestFlag(true);
         const params = [param1, param2, param3, param4];
         const methodSubSignature = new MethodSubSignature(apiName,params,VoidType.getInstance(),false);
         const targetMethodSig = new MethodSignature(classSignature, methodSubSignature);

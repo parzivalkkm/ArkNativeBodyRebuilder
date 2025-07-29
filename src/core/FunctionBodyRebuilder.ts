@@ -158,28 +158,19 @@ export class FunctionBodyRebuilder {
             
             // 如果没有参数，至少创建一个默认参数以避免空数组
             if (parameters.length === 0) {
-                const defaultParam = this.createMethodParameter('defaultParam', StringType.getInstance());
-                parameters.push(defaultParam);
-                this.logger.info('Created default parameter to avoid empty parameter list');
+                // const defaultParam = this.createMethodParameter('defaultParam', StringType.getInstance());
+                // parameters.push(defaultParam);
+                this.logger.warn('Empty parameter list');
             }
             
-            methodSubSignature = ArkSignatureBuilder.buildMethodSubSignatureFromMethodName(
-                `@nodeapiFunction${this.irFunction.getName()}`
-            );
+            methodSubSignature = new MethodSubSignature(`@nodeapiFunction${this.irFunction.getName()}`, [], UnknownType.getInstance(), true)
+            
         }
         
         // 验证并确保参数列表不为空
         const parameters = methodSubSignature.getParameters();
         if (!parameters || parameters.length === 0) {
-            this.logger.warn(`Method signature has no parameters, creating default parameter`);
-            const defaultParam = this.createMethodParameter('defaultParam', StringType.getInstance());
-            
-            // 重新创建 methodSubSignature 包含默认参数
-            methodSubSignature = new MethodSubSignature(
-                methodSubSignature.getMethodName(),
-                [defaultParam],
-                methodSubSignature.getReturnType()
-            );
+            this.logger.warn(`Method signature has no parameters`);
         }
         
         // 遍历methodSubSignature的参数并设置type
@@ -257,6 +248,7 @@ export class FunctionBodyRebuilder {
      */
     private createMethodParameter(name: string, type: any): any {
         // 创建一个基本的参数对象，避免复杂的API调用
+        // TODO 这里的实现有问题
         return {
             getName: () => name,
             getType: () => type,
