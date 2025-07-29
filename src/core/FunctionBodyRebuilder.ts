@@ -20,7 +20,7 @@ import { IRInstruction } from '../ir/IRInstruction';
 import { MethodSubSignatureMap } from '../ir/JsonObjectInterface';
 import { ArkInstanceInvokeExpr, ArkStaticInvokeExpr, ArkPtrInvokeExpr } from '@ArkAnalyzer/src/core/base/Expr';
 import { StringType, UnknownType, FunctionType, ClassType } from '@ArkAnalyzer/src/core/base/Type';
-import { ArkParameterRef } from '@ArkAnalyzer/src/core/base/Ref';
+import { MethodParameter } from '@ArkAnalyzer/src/core/model/builder/ArkMethodBuilder';
 import { ArkAssignStmt, ArkInvokeStmt } from '@ArkAnalyzer/src/core/base/Stmt';
 import { BasicBlock } from '@ArkAnalyzer/src/core/graph/BasicBlock';
 
@@ -118,39 +118,48 @@ export class FunctionBodyRebuilder {
     }
     
     /**
+     * 获取函数的方法子签名
+     */
+    private getMethodSubSignature(): MethodSubSignature | undefined {
+        // 遍历所有文件的方法签名映射
+        for (const [_, methodSubSignatureMapArray] of this.methodSubSignatureMap) {
+            const found = methodSubSignatureMapArray.find(map => map.name === `@nodeapiFunction${this.irFunction.getName()}`);
+            if (found) {
+                this.logger.info(`Found method sub-signature for function: ${this.irFunction.getName()} ${found.methodSubSignature}`);
+                return found.methodSubSignature;
+            }
+        }
+        
+        this.logger.warn(`No method sub-signature found for function: ${this.irFunction.getName()}`);
+        return undefined;
+    }
+    
+    /**
      * 创建ArkMethod及其签名
      */
     private createArkMethod(): void {
         // 设置声明类
         this.functionMethod.setDeclaringArkClass(this.declaringClass);
         
-        let methodSubSignature: MethodSubSignature | undefined;
-        // 遍历所有文件的方法签名映射
-        for (const [_, methodSubSignatureMapArray] of this.methodSubSignatureMap) {
-            const found = methodSubSignatureMapArray.find(map => map.name === `@nodeapiFunction${this.irFunction.getName()}`);
-            if (found) {
-                this.logger.info(`Found method sub-signature for function: ${this.irFunction.getName()} ${found.methodSubSignature}`);
-                methodSubSignature = found.methodSubSignature;
-                break;
-            }
-        }
+        let methodSubSignature: MethodSubSignature | undefined = this.getMethodSubSignature();
         
         if (!methodSubSignature) {
             this.logger.warn(`No method sub-signature found for function: ${this.irFunction.getName()}, creating default signature`);
             
             // 创建默认的参数列表
-            const parameters: any[] = [];
+            const parameters: MethodParameter[] = [];
             const args = this.callsiteInvokeExpr.getArgs();
             
             // 基于调用表达式的参数创建方法参数
             for (let i = 0; i < args.length; i++) {
                 const arg = args[i];
-                const paramName = `param${i}`;
+                const paramName = `p${i + 1}`;  // 使用p1, p2, p3...的命名方式
                 const paramType = arg.getType() || StringType.getInstance();
                 
-                // 创建参数对象 - 这里需要根据实际的 ArkAnalyzer API 来创建
-                // 假设有一个方法来创建参数
-                const param = this.createMethodParameter(paramName, paramType);
+                // 创建正确的MethodParameter参数
+                const param = new MethodParameter();
+                param.setName(paramName);
+                param.setType(paramType);
                 parameters.push(param);
                 
                 this.logger.info(`Created default parameter: ${paramName} with type: ${paramType}`);
@@ -158,12 +167,20 @@ export class FunctionBodyRebuilder {
             
             // 如果没有参数，至少创建一个默认参数以避免空数组
             if (parameters.length === 0) {
-                // const defaultParam = this.createMethodParameter('defaultParam', StringType.getInstance());
-                // parameters.push(defaultParam);
-                this.logger.warn('Empty parameter list');
+                const defaultParam = new MethodParameter();
+                defaultParam.setName('defaultParam');
+                defaultParam.setType(StringType.getInstance());
+                parameters.push(defaultParam);
+                this.logger.warn('Created default parameter since no arguments found');
             }
             
-            methodSubSignature = new MethodSubSignature(`@nodeapiFunction${this.irFunction.getName()}`, [], UnknownType.getInstance(), true)
+            // 使用创建的参数列表创建MethodSubSignature
+            methodSubSignature = new MethodSubSignature(
+                `@nodeapiFunction${this.irFunction.getName()}`, 
+                parameters,  // 使用实际创建的参数列表
+                UnknownType.getInstance(), 
+                true
+            );
             
         }
         
