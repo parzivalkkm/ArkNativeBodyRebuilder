@@ -1,0 +1,20 @@
+{
+    "targetProjectName": "TaintTest",    
+    "targetProjectDirectory": "D:\\workdir\\HUAWEI\\hormonyos\\code\\HarmonyNativeFlowBench\\native_clean",
+
+    "logPath": "out/ArkAnalyzer.log",
+    "logLevel": "DEBUG",
+    
+    "sdks": [
+        {
+            "name": "etsSdk",
+            "path": "D:\\OpenHarmony\\DevEco Studio\\sdk\\default\\openharmony\\ets",
+            "moduleName": ""
+        },
+        {
+          "name": "hmsSdk",
+          "path": "D:\\OpenHarmony\\DevEco Studio\\sdk\\default\\hms\\ets",
+          "moduleName": ""
+        }
+      ]
+}
