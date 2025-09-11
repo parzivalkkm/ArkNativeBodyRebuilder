@@ -565,4 +565,32 @@ export class CrossLanguageCallAnalyzer {
     public getDynamicImportMap(): Map<string, string> {
         return new Map(this.dynamicImportMap);
     }
+    
+    /**
+     * 获取调用点统计信息 - 直接统计各种调用表达式类型的数量
+     */
+    public getCallsiteStatistics(): Map<string, number> {
+        const callsitesByType = new Map<string, number>();
+        
+        for (const [moduleName, callDetails] of this.napiCallDetailsMap.entries()) {
+            if (callDetails && Array.isArray(callDetails)) {
+                callDetails.forEach(detail => {
+                    const invokeExpr = detail.invokeExpr;
+                    let callType = 'unknown';
+                    
+                    if (invokeExpr instanceof ArkStaticInvokeExpr) {
+                        callType = 'ArkStaticInvokeExpr';
+                    } else if (invokeExpr instanceof ArkInstanceInvokeExpr) {
+                        callType = 'ArkInstanceInvokeExpr';
+                    } else if (invokeExpr instanceof ArkPtrInvokeExpr) {
+                        callType = 'ArkPtrInvokeExpr';
+                    }
+                    
+                    callsitesByType.set(callType, (callsitesByType.get(callType) || 0) + 1);
+                });
+            }
+        }
+        
+        return callsitesByType;
+    }
 }
