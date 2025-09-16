@@ -9,7 +9,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "Batch Test",
       //作用：调试时加载ts-node包（在调试时直接运行ts代码）
       "runtimeArgs": ["-r","ts-node/register","-r","tsconfig-paths/register"],
       //01调试.ts表示要调试的ts文件        
@@ -17,8 +17,38 @@
       // "args": ["tests/DroidbenchTest.ts"]
       
       // "args": ["tests/TaintAnalysisTest.ts"]
-      // "args": ["tests/BatchTest.ts"]
-      "args": ["tests/NativeBodyRebuilderTest.ts"]
+      "args": ["tests/Batch/BatchTest.ts"]
+      // "args": ["tests/NativeBodyRebuilderTest_mine.ts"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Single Test",
+      //作用：调试时加载ts-node包（在调试时直接运行ts代码）
+      "runtimeArgs": ["-r","ts-node/register","-r","tsconfig-paths/register"],
+      //01调试.ts表示要调试的ts文件        
+      // "args": ["tests/createDummyMainTest.ts"]
+      // "args": ["tests/DroidbenchTest.ts"]
+      
+      // "args": ["tests/TaintAnalysisTest.ts"]
+      // "args": ["tests/Batch/BatchTest.ts"]
+      "args": ["tests/NativeBodyRebuilderTest_mine.ts"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "DumpIR",
+      //作用：调试时加载ts-node包（在调试时直接运行ts代码）
+      "runtimeArgs": ["-r","ts-node/register","-r","tsconfig-paths/register"],
+      "args": ["tests/Batch/BatchCodeGeneration.ts"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Illustration",
+      //作用：调试时加载ts-node包（在调试时直接运行ts代码）
+      "runtimeArgs": ["-r","ts-node/register","-r","tsconfig-paths/register"],
+      "args": ["tests/IllustrateTest/IllustrateBatchTest.ts"]
     }
   ]
 }

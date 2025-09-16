@@ -11,7 +11,7 @@ import { Scene } from '@ArkAnalyzer/src/Scene';
 import { MethodSignature, MethodSubSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 import { ArkSignatureBuilder } from '@ArkAnalyzer/src/core/model/builder/ArkSignatureBuilder';
 import { checkAndUpdateMethod } from '@ArkAnalyzer/src/core/model/builder/ArkMethodBuilder';
-import { SafeTypeInference } from './SafeTypeInference';
+import { IRValueTypeInference } from './TypeInference';
 import { CFGBuilder } from './CFGBuilder';
 
 import { LOG_MODULE_TYPE } from '@ArkAnalyzer/src/utils/logger';
@@ -48,10 +48,6 @@ export class FunctionBodyRebuilder {
         return FunctionBodyRebuilder.functionNumber++;
     }
 
-    // TODO 在functionBodyRebuilder之前
-    // 需要获取调用上下文，对于传入参数为object以及Function的情况
-    // 需要其ClassSignature，MethodSignature
-    // 涉及到类操作以及field操作时，构建对应的FieldSignature，只有指明常量字符串才可能做到
 
     // 此外对于call function时，获取对应的域也很重要，staticcall时直接获取this，instancecall时需要获取对应的class
       constructor(
@@ -92,7 +88,7 @@ export class FunctionBodyRebuilder {
         this.logger.debug(`Extracted ${realArgs.length} real arguments`);
         
         // 3. 进行类型推断
-        const typeInference = new SafeTypeInference(this.irFunction, this.logger);
+        const typeInference = new IRValueTypeInference(this.irFunction, this.logger);
         typeInference.inferTypes();
         this.logger.debug(`Type inference completed`);
         
@@ -233,7 +229,7 @@ export class FunctionBodyRebuilder {
         if (this.callsiteInvokeExpr instanceof ArkInstanceInvokeExpr) {
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
             let base = this.callsiteInvokeExpr.getBase();
-            // TODO: 更新base的类型
+
             // base type改为 declaringClass
             if (base instanceof Local) {
                 // 确保base的类型与declaringClass匹配
@@ -246,7 +242,6 @@ export class FunctionBodyRebuilder {
             // 对于静态调用，需要更新方法签名
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
         } else if (this.callsiteInvokeExpr instanceof ArkPtrInvokeExpr) {
-            // TODO: 对于指针调用，需要更新方法签名
             this.callsiteInvokeExpr.setMethodSignature(methodSignature);
         }
         
@@ -265,7 +260,6 @@ export class FunctionBodyRebuilder {
      */
     private createMethodParameter(name: string, type: any): any {
         // 创建一个基本的参数对象，避免复杂的API调用
-        // TODO 这里的实现有问题
         return {
             getName: () => name,
             getType: () => type,

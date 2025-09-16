@@ -8,3 +8,8 @@ tests/resources/ifdsTestConfig_mine.json
 .vscode/
 tests/resources/HarmonyNativeFlowBench/
 tests/resources/ifdsTestConfig.json
+IFDS*.json
+*.log
+pag_*
+console
+arkanalyzer/

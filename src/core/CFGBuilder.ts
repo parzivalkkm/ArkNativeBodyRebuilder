@@ -76,9 +76,6 @@ export class CFGBuilder {
         // 获取方法参数
         const methodParams = this.arkMethod.getParameters();
         const realArgs = this.irFunction.getRealArgs();
-        // TODO: 存在问题
-        // 如果方法参数已经定义，则使用这些参数，但是如果和真正参数不一致怎么办？
-
 
         if (methodParams.length > 0) {
             if (this.irFunction.getRealArgs().length !== methodParams.length) {
@@ -336,7 +333,6 @@ export class CFGBuilder {
         }
         
         // 查找索引为"2"的返回值（通常是存储提取的数值） 
-        // TODO: 这里操作其实不必要
         const resultVar = this.findReturnValueByIndex(callInst, "2");
         if (resultVar) {
             resultVar.setArktsValue(arktsNumberValue);
@@ -429,7 +425,6 @@ export class CFGBuilder {
             currentBlock.addStmt(assignStmt);
             
             // 查找索引为"2"的返回值（通常是提取的字符串）
-            // TODO: 这里操作其实不必要
             const stringResultVar = this.findReturnValueByIndex(callInst, "2");
             if (stringResultVar) {
                 stringResultVar.setArktsValue(stringValue);
@@ -598,7 +593,6 @@ export class CFGBuilder {
             }
         }
         else if(target === "napi_create_array_with_length"){
-            // TODO 实现的不正确
             const operands = callInst.getOperands();
             
             if(operands.length < 2){
@@ -736,7 +730,7 @@ export class CFGBuilder {
             const resultVar = this.findReturnValueByIndex(callInst, "3");
             // 怎么处理indexlocal
             if(resultVar){
-                const local = new Local(`%get_element_${this.constIdCounter++}`, AnyType.getInstance()); // TODO: 暂时设为AnyType，可能需要改进
+                const local = new Local(`%get_element_${this.constIdCounter++}`, AnyType.getInstance()); 
                 const arrayRef = new ArkArrayRef(objectValue as Local, indexValue);
                 const assignStmt = new ArkAssignStmt(local, arrayRef);
                 local.setDeclaringStmt(assignStmt);
@@ -747,10 +741,11 @@ export class CFGBuilder {
         }
         else if(target === "napi_has_element"){
             // TODO: 实现检查元素是否存在
+            // ArkTS中不存在类似于index in array的语法
         }
         else if(target === "napi_delete_element"){
             // TODO: 实现删除元素
-            // 好像可以用ArkDeleteExpr来实现
+            // ArkTS中不存在delete array[index]的语法
         }
         
         return currentBlock;
@@ -1350,7 +1345,6 @@ export class CFGBuilder {
         const operands = callInst.getOperands();
         if(target === "napi_get_global"){
             // 获取global对象，返回值1
-            // TODO 获取callsite处的上下文
             const globalVar = this.findReturnValueByIndex(callInst, "1");
             if (globalVar) {
                 // 创建一个新的Local变量
@@ -1594,7 +1588,6 @@ export class CFGBuilder {
         const errorFileSignature = new FileSignature("ES2015", "BuiltinClass");
         const errorClassSignature = new ClassSignature("Error", errorFileSignature, null);
         const errorType = new ClassType(errorClassSignature);
-        // TODO parameter数量是0？是否不正确？
         const constructorSignature = new MethodSignature(errorClassSignature, new MethodSubSignature("constructor", [], errorType, false));
 
         const target = callInst.getTarget();
@@ -1609,9 +1602,6 @@ export class CFGBuilder {
             case "napi_throw_type_error":
             case "napi_throw_range_error":
                 // 抛出错误
-                // TODO
-                // 分三个语句，一个是assign new，一个是instance invoke，然后是ThrowStmt
-
                 const errCodeOperand = operands[1];
                 const errCodeValue = this.getOrCreateValueForIrValue(errCodeOperand, currentBlock);
                 if (!errCodeValue) {

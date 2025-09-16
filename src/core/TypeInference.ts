@@ -6,10 +6,10 @@ import { Type, NumberType, StringType, BooleanType, ArrayType, AnyType, UnknownT
 import { ClassSignature, FileSignature } from '@ArkAnalyzer/src/core/model/ArkSignature';
 
 /**
- * 安全的类型推导系统，参考 JimpleBuilder 的 TypeAnalysis 实现
- * 直接使用 ArkAnalyzer 的 Type 体系，不再依赖自定义枚举
+ * 类型推导系统
+ * 直接使用 ArkAnalyzer 的 Type 体系
  */
-export class SafeTypeInference {
+export class IRValueTypeInference {
     private logger: Logger;
     private irFunction: IRFunction;
     
@@ -61,7 +61,7 @@ export class SafeTypeInference {
                 this.setValueType(param, UnknownType.getInstance());
             } else if (index === 1) {
                 // this 对象参数
-                this.setValueType(param, SafeTypeInference.createObjectType());
+                this.setValueType(param, IRValueTypeInference.createObjectType());
             } else {
                 // 其他参数保持默认类型或从函数签名推断
                 this.setValueType(param, AnyType.getInstance());
@@ -172,7 +172,7 @@ export class SafeTypeInference {
             // 对象相关
             const returnValues = callInst.getReturnValues();
             for (const [_, returnValue] of returnValues.entries()) {
-                const result = this.setValueType(returnValue, SafeTypeInference.createObjectType());
+                const result = this.setValueType(returnValue, IRValueTypeInference.createObjectType());
                 updated = updated || result;
             }
         }
